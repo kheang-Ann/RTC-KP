@@ -1,11 +1,9 @@
-version: '3.8'
-
 services:
   backend:
     build: 
       context: ./backend
       dockerfile: Dockerfile
-    container_name: hotel_booking_system
+    container_name: rtc_kp_backend
     command: npm run start:dev
     ports:
       - "3000:3000"
@@ -19,7 +17,7 @@ services:
   
   postgres:
     image: postgres:16
-    container_name: hotel_booking_system_pg
+    container_name: rtc_kp_pg
     restart: always
     environment:
       POSTGRES_DB: ${DB_NAME}
