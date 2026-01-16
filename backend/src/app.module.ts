@@ -4,6 +4,9 @@ import { AppService } from './app.service';
 import DatabaseConfig from './config/db.config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+// import { CourseModule } from './modules/courses/course.module';
+import { UserModule } from './modules/users/user.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         synchronize: true, // Auto-creates tables (only for development!)
       }),
     }),
+    AuthModule,
+    UserModule,
+    // CourseModule,
   ],
   controllers: [AppController],
   providers: [AppService],
