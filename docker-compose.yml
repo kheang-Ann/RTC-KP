@@ -1,32 +1,18 @@
+version: '3.8'
+
 services:
-  backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: rtc_kp_backend
-    command: npm run start:dev
-    ports:
-      - "3000:3000"
-    depends_on:
-      - postgres
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    env_file:
-      - .env
-  
   postgres:
-    image: postgres:16
-    container_name: rtc_kp_pg
+    image: postgres:15
+    container_name: rtc_kp_postgres
     restart: always
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: rtc_kp_db
     ports:
-      - "${DB_HOST_PORT}:${DB_CONTAINER_PORT}"
+      - "5435:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  pgdata:
+  postgres_data:

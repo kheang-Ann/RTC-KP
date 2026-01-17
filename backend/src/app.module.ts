@@ -1,27 +1,30 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import DatabaseConfig from './config/db.config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { LeaveModule } from './leave/leave.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [DatabaseConfig],
-      envFilePath: '../.env',
+      envFilePath: '.env', // Make sure this points to backend/.env
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        url: config.get('DATABASE_URL'),
-        autoLoadEntities: true,
-        synchronize: true, // Auto-creates tables (only for development!)
-      }),
+      useFactory: (config: ConfigService) => {
+        console.log('DATABASE_URL:', config.get('DATABASE_URL')); // Debug log
+        return {
+          type: 'postgres',
+          url: config.get('DATABASE_URL'),
+          autoLoadEntities: true,
+          synchronize: true,
+        };
+      },
     }),
+    LeaveModule,
   ],
   controllers: [AppController],
   providers: [AppService],
