@@ -4,9 +4,11 @@ import { AppService } from './app.service';
 import DatabaseConfig from './config/db.config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-// import { CourseModule } from './modules/courses/course.module';
 import { UserModule } from './modules/users/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DepartmentModule } from './modules/departments/department.module';
+import { CourseModule } from './modules/courses/course.module';
+import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 
 @Module({
   imports: [
@@ -27,7 +29,9 @@ import { AuthModule } from './modules/auth/auth.module';
     }),
     AuthModule,
     UserModule,
-    // CourseModule,
+    DepartmentModule,
+    CourseModule,
+    EnrollmentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
