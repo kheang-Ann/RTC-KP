@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,7 +21,24 @@ export class UserService {
   @InjectRepository(Role)
   private roleRepo: Repository<Role>;
 
+  private async isAdminRole(roleId: number): Promise<boolean> {
+    const role = await this.roleRepo.findOne({ where: { id: roleId } });
+    return role?.name === 'admin';
+  }
+
+  private hasAdminRole(user: User): boolean {
+    return user.roles?.some((ur) => ur.role?.name === 'admin') ?? false;
+  }
+
   async create(data: Partial<User>, roleId?: number): Promise<User> {
+    // Prevent creating users with admin role
+    if (roleId) {
+      const isAdmin = await this.isAdminRole(roleId);
+      if (isAdmin) {
+        throw new ForbiddenException('Cannot create users with admin role');
+      }
+    }
+
     const newUser = this.userRepo.create(data);
     const savedUser = await this.userRepo.save(newUser);
 
@@ -44,6 +65,12 @@ export class UserService {
 
   async update(id: number, dto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
+
+    // Prevent updating admin users
+    if (this.hasAdminRole(user)) {
+      throw new ForbiddenException('Cannot modify admin users');
+    }
+
     const updatedUser = this.userRepo.merge(user, dto);
     return this.userRepo.save(updatedUser);
   }
@@ -71,6 +98,13 @@ export class UserService {
   }
 
   async remove(id: number): Promise<void> {
+    const user = await this.findOne(id);
+
+    // Prevent deleting admin users
+    if (this.hasAdminRole(user)) {
+      throw new ForbiddenException('Cannot delete admin users');
+    }
+
     const result = await this.userRepo.delete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`User with ID ${id} not found`);

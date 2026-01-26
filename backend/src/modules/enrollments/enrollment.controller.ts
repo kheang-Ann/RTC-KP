@@ -9,6 +9,7 @@ import {
   Post,
   Patch,
   UseGuards,
+  Req,
 } from '@nestjs/common';
 import { EnrollmentService } from './enrollment.service';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
@@ -32,6 +33,13 @@ export class EnrollmentController {
   @Roles('admin', 'teacher')
   async findAll() {
     return this.enrollmentService.findAll();
+  }
+
+  // Get my enrollments (for student)
+  @Get('my')
+  @Roles('student')
+  async findMyEnrollments(@Req() req: any) {
+    return this.enrollmentService.findByStudent(req.user.sub);
   }
 
   @Get(':id')

@@ -11,6 +11,7 @@ import { CourseModule } from './modules/courses/course.module';
 import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { AttendancesModule } from './modules/attendances/attendances.module';
+import { LeaveRequestsModule } from './modules/leave-requests/leave-requests.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AttendancesModule } from './modules/attendances/attendances.module';
     EnrollmentModule,
     SessionsModule,
     AttendancesModule,
+    LeaveRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

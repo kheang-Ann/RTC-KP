@@ -18,7 +18,7 @@ import { Roles } from '../auth/decorator/roles.decorator';
 
 interface RequestWithUser {
   user: {
-    id: number;
+    sub: number; // JWT uses 'sub' for user ID
     email: string;
     roles: string[];
   };
@@ -32,14 +32,15 @@ export class SessionsController {
   @Post()
   @Roles('teacher', 'admin')
   async create(@Body() dto: CreateSessionDto, @Req() req: RequestWithUser) {
-    return this.sessionsService.create(dto, req.user.id);
+    const isAdmin = req.user.roles?.includes('admin') ?? false;
+    return this.sessionsService.create(dto, req.user.sub, isAdmin);
   }
 
   @Get()
   @Roles('teacher', 'admin')
   async findAll(@Req() req: RequestWithUser) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.sessionsService.findAll(req.user.id, isAdmin);
+    return this.sessionsService.findAll(req.user.sub, isAdmin);
   }
 
   @Get('course/:courseId')
@@ -62,34 +63,34 @@ export class SessionsController {
     @Req() req: RequestWithUser,
   ) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.sessionsService.update(id, dto, req.user.id, isAdmin);
+    return this.sessionsService.update(id, dto, req.user.sub, isAdmin);
   }
 
   @Post(':id/activate')
   @Roles('teacher', 'admin')
   async activate(@Param('id') id: string, @Req() req: RequestWithUser) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.sessionsService.activateSession(id, req.user.id, isAdmin);
+    return this.sessionsService.activateSession(id, req.user.sub, isAdmin);
   }
 
   @Post(':id/complete')
   @Roles('teacher', 'admin')
   async complete(@Param('id') id: string, @Req() req: RequestWithUser) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.sessionsService.completeSession(id, req.user.id, isAdmin);
+    return this.sessionsService.completeSession(id, req.user.sub, isAdmin);
   }
 
   @Post(':id/regenerate-code')
   @Roles('teacher', 'admin')
   async regenerateCode(@Param('id') id: string, @Req() req: RequestWithUser) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.sessionsService.regenerateCode(id, req.user.id, isAdmin);
+    return this.sessionsService.regenerateCode(id, req.user.sub, isAdmin);
   }
 
   @Delete(':id')
   @Roles('teacher', 'admin')
   async remove(@Param('id') id: string, @Req() req: RequestWithUser) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.sessionsService.remove(id, req.user.id, isAdmin);
+    return this.sessionsService.remove(id, req.user.sub, isAdmin);
   }
 }

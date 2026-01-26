@@ -18,7 +18,8 @@ export class EnrollmentService {
 
   async findAll(): Promise<Enrollment[]> {
     return this.enrollmentRepo.find({
-      relations: ['student', 'course'],
+      relations: ['student', 'course', 'course.teacher'],
+      order: { enrolledAt: 'DESC' },
     });
   }
 
@@ -36,7 +37,7 @@ export class EnrollmentService {
       where: { studentId },
       relations: ['course'],
       select: {
-        course: { id: true, name: true },
+        course: { id: true, name: true, code: true },
       },
     });
   }

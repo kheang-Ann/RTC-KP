@@ -21,8 +21,12 @@ export class SessionsService {
     private courseRepo: Repository<Course>,
   ) {}
 
-  async create(dto: CreateSessionDto, userId: number): Promise<Session> {
-    // Verify the course exists and user is the teacher
+  async create(
+    dto: CreateSessionDto,
+    userId: number,
+    isAdmin: boolean = false,
+  ): Promise<Session> {
+    // Verify the course exists
     const course = await this.courseRepo.findOne({
       where: { id: dto.courseId },
     });
@@ -31,9 +35,10 @@ export class SessionsService {
       throw new NotFoundException('Course not found');
     }
 
-    if (course.teacherId !== userId) {
+    // Only the course teacher can create sessions (unless admin)
+    if (!isAdmin && course.teacherId !== userId) {
       throw new ForbiddenException(
-        'Only the course teacher can create sessions',
+        'Only the course teacher can create sessions for this course',
       );
     }
 
@@ -55,12 +60,25 @@ export class SessionsService {
       });
     }
 
-    // For teachers, only return their sessions
-    return this.sessionRepo.find({
-      where: { createdById: userId },
-      relations: ['course', 'createdBy'],
-      order: { startTime: 'DESC' },
+    // For teachers, return sessions for courses they teach
+    const teacherCourses = await this.courseRepo.find({
+      where: { teacherId: userId },
+      select: ['id'],
     });
+
+    if (teacherCourses.length === 0) {
+      return [];
+    }
+
+    const courseIds = teacherCourses.map((c) => c.id);
+
+    return this.sessionRepo
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.course', 'course')
+      .leftJoinAndSelect('session.createdBy', 'createdBy')
+      .where('session.courseId IN (:...courseIds)', { courseIds })
+      .orderBy('session.startTime', 'DESC')
+      .getMany();
   }
 
   async findByCourse(courseId: string): Promise<Session[]> {

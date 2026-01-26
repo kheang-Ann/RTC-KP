@@ -28,14 +28,14 @@ export class AttendancesController {
   @Post('check-in')
   @Roles('student')
   async checkIn(@Body() dto: CheckInDto, @Req() req: any) {
-    return this.attendancesService.checkIn(dto, req.user.id);
+    return this.attendancesService.checkIn(dto, req.user.sub);
   }
 
   @Post('mark')
   @Roles('teacher', 'admin')
   async markAttendance(@Body() dto: MarkAttendanceDto, @Req() req: any) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.attendancesService.markAttendance(dto, req.user.id, isAdmin);
+    return this.attendancesService.markAttendance(dto, req.user.sub, isAdmin);
   }
 
   @Post('bulk-mark')
@@ -45,7 +45,7 @@ export class AttendancesController {
     @Req() req: any,
   ) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.attendancesService.bulkMarkAttendance(dto, req.user.id, isAdmin);
+    return this.attendancesService.bulkMarkAttendance(dto, req.user.sub, isAdmin);
   }
 
   @Get('session/:sessionId')
@@ -63,7 +63,7 @@ export class AttendancesController {
   @Get('my')
   @Roles('student')
   async findMyAttendance(@Req() req: any) {
-    return this.attendancesService.findByStudent(req.user.id);
+    return this.attendancesService.findByStudent(req.user.sub);
   }
 
   @Get('my/course/:courseId')
@@ -73,7 +73,7 @@ export class AttendancesController {
     @Req() req: any,
   ) {
     return this.attendancesService.findByStudentAndCourse(
-      req.user.id,
+      req.user.sub,
       courseId,
     );
   }

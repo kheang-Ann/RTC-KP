@@ -18,7 +18,8 @@ import { Roles } from '../auth/decorator/roles.decorator';
 
 interface RequestWithUser {
   user: {
-    id: number;
+    sub: number; // JWT uses 'sub' for user ID
+    id?: number;
     email: string;
     roles: string[];
   };
@@ -48,7 +49,7 @@ export class CourseController {
     if (isAdmin) {
       return this.courseService.findAll();
     }
-    return this.courseService.findByTeacher(req.user.id);
+    return this.courseService.findByTeacher(req.user.sub);
   }
 
   @Get(':id')
