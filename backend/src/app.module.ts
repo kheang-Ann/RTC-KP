@@ -9,6 +9,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { DepartmentModule } from './modules/departments/department.module';
 import { CourseModule } from './modules/courses/course.module';
 import { EnrollmentModule } from './modules/enrollments/enrollment.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
+import { AttendancesModule } from './modules/attendances/attendances.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { EnrollmentModule } from './modules/enrollments/enrollment.module';
     DepartmentModule,
     CourseModule,
     EnrollmentModule,
+    SessionsModule,
+    AttendancesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

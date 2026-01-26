@@ -19,10 +19,6 @@ export class EnrollmentService {
   async findAll(): Promise<Enrollment[]> {
     return this.enrollmentRepo.find({
       relations: ['student', 'course'],
-      select: {
-        student: { id: true, email: true },
-        course: { id: true, name: true },
-      },
     });
   }
 

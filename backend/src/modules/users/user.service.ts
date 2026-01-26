@@ -50,7 +50,7 @@ export class UserService {
 
   async findAll(): Promise<User[]> {
     return this.userRepo.find({
-      relations: ['roles', 'roles.role'],
+      relations: ['roles', 'roles.role', 'department'],
     });
   }
   async findOne(id: number): Promise<User> {

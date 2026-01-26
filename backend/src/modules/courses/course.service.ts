@@ -10,7 +10,16 @@ export class CourseService {
   private courseRepo: Repository<Course>;
 
   async findAll(): Promise<Course[]> {
-    return this.courseRepo.find();
+    return this.courseRepo.find({
+      relations: ['department', 'teacher'],
+    });
+  }
+
+  async findByTeacher(teacherId: number): Promise<Course[]> {
+    return this.courseRepo.find({
+      where: { teacherId },
+      relations: ['department', 'teacher'],
+    });
   }
 
   async findOne(id: string): Promise<Course | null> {

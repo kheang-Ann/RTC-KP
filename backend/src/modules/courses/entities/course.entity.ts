@@ -4,7 +4,6 @@ import {
   Column,
   Entity,
   JoinColumn,
-  OneToOne,
   OneToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -20,11 +19,17 @@ export class Course {
   @Column()
   name: string;
 
+  @Column({ type: 'varchar', unique: true, nullable: true })
+  code: string | null;
+
+  @Column({ type: 'int', default: 1 })
+  credits: number;
+
   @Index()
   @Column({ type: 'int', nullable: true })
   departmentId: number | null;
 
-  @OneToOne(() => Department)
+  @ManyToOne(() => Department)
   @JoinColumn({ name: 'departmentId' })
   department: Department;
 
@@ -36,7 +41,10 @@ export class Course {
   @JoinColumn({ name: 'teacherId' })
   teacher: User;
 
-  @OneToMany(() => Enrollment, (enrollment) => enrollment.course)
+  @OneToMany(() => Enrollment, (enrollment) => enrollment.course, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   enrollments: Enrollment[];
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })

@@ -36,4 +36,13 @@ export class DepartmentService {
     }
     return this.departmentRepo.remove(department);
   }
+
+  async update(id: number, dto: Partial<Department>) {
+    const department = await this.departmentRepo.findOne({ where: { id } });
+    if (!department) {
+      throw new NotFoundException(`Department with id ${id} not found`);
+    }
+    Object.assign(department, dto);
+    return this.departmentRepo.save(department);
+  }
 }
