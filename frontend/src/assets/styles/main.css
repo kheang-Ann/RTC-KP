@@ -14,6 +14,8 @@
   --color-light-blue: #d3d7fbcc;
   --color-gray: #d9d9d9;
   --color-white: #ffffff;
+  --color-dark-blue: #374151;
+  --color-black: #000000;
 
   /* Font Weights */
   --fw-bold: 700;
@@ -33,7 +35,7 @@
 body {
   margin: 30px;
   font-family: 'Inter', sans-serif;
-  color: var(--color-white); /* Defaulting to your blue */
+  color: var(--color-black); /* Defaulting to your blue */
 }
 
 h1 { font-size: var(--fs-h1); font-weight: var(--fw-bold); }
