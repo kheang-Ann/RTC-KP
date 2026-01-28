@@ -61,7 +61,7 @@ export class AuthService {
       },
       {
         secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRES ?? '15m',
+        expiresIn: process.env.JWT_ACCESS_EXPIRES ?? '60m',
       } as any,
     );
 
@@ -77,6 +77,16 @@ export class AuthService {
       expiresAt: expiresAt,
     });
 
-    return { accessToken, refreshToken };
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: roleNames,
+      },
+    };
   }
 }

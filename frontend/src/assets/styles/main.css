@@ -1,0 +1,43 @@
+/* src/assets/main.css */
+
+:root {
+  /* Colors */
+  --color-blue: #2e43fa;
+  --color-light-red: #ffdfdf;
+  --color-green: #5dc746;
+  --color-medium-red: #f1181880;
+  --color-red: #ff0d0d80;
+  --color-light-green: #d9fbd2;
+  --color-dark-green: #306425;
+  --color-pink: #b94ee6;
+  --color-yellow: #facb2e;
+  --color-light-blue: #d3d7fbcc;
+  --color-gray: #d9d9d9;
+  --color-white: #ffffff;
+  --color-dark-blue: #374151;
+  --color-black: #000000;
+
+  /* Font Weights */
+  --fw-bold: 700;
+  --fw-semi-bold: 600;
+  --fw-normal: 400;
+  --fw-light: 300;
+
+  /* Font Sizes */
+  --fs-h1: 40px;
+  --fs-h2: 36px;
+  --fs-h3: 32px;
+  --fs-title: 24px;
+  --fs-desc: 20px;
+  --fs-para: 16px;
+}
+
+body {
+  margin: 30px;
+  font-family: 'Inter', sans-serif;
+  color: var(--color-black); /* Defaulting to your blue */
+}
+
+h1 { font-size: var(--fs-h1); font-weight: var(--fw-bold); }
+h2 { font-size: var(--fs-h2); font-weight: var(--fw-semi-bold); }
+p { font-size: var(--fs-para); }
