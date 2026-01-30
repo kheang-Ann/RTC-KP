@@ -11,6 +11,7 @@ import { coursesService, type Course } from '@/services/courses'
 import { enrollmentsService, type Enrollment } from '@/services/enrollments'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
+import { isValidRemarks } from '@/utils/validation'
 
 const attendances = ref<Attendance[]>([])
 const sessions = ref<Session[]>([])
@@ -198,6 +199,24 @@ function getStatusClass(status: AttendanceStatus) {
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString()
 }
+
+function getRemarksError(studentId: number): string | null {
+  const entry = bulkAttendances.value[studentId]
+  if (entry?.remarks) {
+    return isValidRemarks(entry.remarks)
+  }
+  return null
+}
+
+function hasValidationErrors(): boolean {
+  for (const studentId of Object.keys(bulkAttendances.value)) {
+    const entry = bulkAttendances.value[parseInt(studentId)]
+    if (entry?.remarks && isValidRemarks(entry.remarks)) {
+      return true
+    }
+  }
+  return false
+}
 </script>
 
 <template>
@@ -327,18 +346,30 @@ function formatDate(dateStr: string) {
                 <input
                   v-model="bulkAttendances[enrollment.studentId].remarks"
                   type="text"
-                  placeholder="Optional remarks"
+                  placeholder="Optional remarks (max 500 chars)"
                   class="remarks-input"
+                  :class="{ 'input-error': getRemarksError(enrollment.studentId) }"
+                  maxlength="500"
                 />
+                <span v-if="getRemarksError(enrollment.studentId)" class="field-error">
+                  {{ getRemarksError(enrollment.studentId) }}
+                </span>
               </td>
             </template>
           </tr>
         </tbody>
       </table>
       <div class="submit-section">
-        <button class="btn btn-primary" @click="markBulkAttendance" :disabled="loading">
+        <button
+          class="btn btn-primary"
+          @click="markBulkAttendance"
+          :disabled="loading || hasValidationErrors()"
+        >
           Submit Attendance
         </button>
+        <span v-if="hasValidationErrors()" class="validation-warning">
+          Please fix validation errors before submitting
+        </span>
       </div>
     </div>
 
@@ -434,6 +465,24 @@ function formatDate(dateStr: string) {
   width: 100%;
 }
 
+.remarks-input.input-error {
+  border-color: #dc3545;
+}
+
+.field-error {
+  color: #dc3545;
+  font-size: 0.75rem;
+  display: block;
+  margin-top: 2px;
+}
+
+.validation-warning {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-left: 12px;
+  align-self: center;
+}
+
 .status-present {
   background: #d1fae5;
   color: #065f46;
@@ -476,6 +525,8 @@ function formatDate(dateStr: string) {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
 }
 
 .alert-error {

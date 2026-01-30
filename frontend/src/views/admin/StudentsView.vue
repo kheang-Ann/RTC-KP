@@ -8,6 +8,7 @@ import {
 } from '@/services/students'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
+import { isValidPhoneNumber, isValidOptionalPassword } from '@/utils/validation'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -20,6 +21,16 @@ const showModal = ref(false)
 const editingStudent = ref<Student | null>(null)
 const selectedImage = ref<File | null>(null)
 const imagePreview = ref<string | null>(null)
+
+// Field-level errors
+const fieldErrors = ref<Record<string, string>>({})
+
+// Clear field error when user starts typing
+function clearFieldError(field: string) {
+  if (fieldErrors.value[field]) {
+    delete fieldErrors.value[field]
+  }
+}
 
 // Programs filtered by selected department
 const filteredPrograms = computed(() => {
@@ -182,30 +193,88 @@ function validateAge(dob: string): boolean {
   return age >= 16
 }
 
-async function saveStudent() {
-  // Validation
-  if (!form.value.departmentId || !form.value.programId) {
-    error.value = 'Please select department and program'
-    return
+// Validate all fields and return true if valid
+function validateForm(): boolean {
+  fieldErrors.value = {}
+  let isValid = true
+
+  // Validate department
+  if (!form.value.departmentId) {
+    fieldErrors.value.departmentId = 'Department is required'
+    isValid = false
   }
 
-  if (!validateAge(form.value.dob)) {
-    error.value = 'Student must be at least 16 years old'
+  // Validate program
+  if (!form.value.programId) {
+    fieldErrors.value.programId = 'Program is required'
+    isValid = false
+  }
+
+  // Validate age
+  if (form.value.dob && !validateAge(form.value.dob)) {
+    fieldErrors.value.dob = 'Student must be at least 16 years old'
+    isValid = false
+  }
+
+  // Validate phone numbers
+  const phones = form.value.phoneNumbers.filter((p) => p.trim())
+  if (phones.length === 0) {
+    fieldErrors.value.phoneNumbers = 'At least one phone number is required'
+    isValid = false
+  } else {
+    for (let i = 0; i < phones.length; i++) {
+      const phone = phones[i]
+      if (phone) {
+        const phoneError = isValidPhoneNumber(phone)
+        if (phoneError) {
+          fieldErrors.value.phoneNumbers = `Phone #${i + 1}: ${phoneError}`
+          isValid = false
+          break
+        }
+      }
+    }
+  }
+
+  // Validate emergency phone numbers
+  const emergencyPhones = form.value.emergencyPhoneNumbers.filter((p) => p.trim())
+  if (emergencyPhones.length === 0) {
+    fieldErrors.value.emergencyPhoneNumbers = 'At least one emergency phone is required'
+    isValid = false
+  } else {
+    for (let i = 0; i < emergencyPhones.length; i++) {
+      const phone = emergencyPhones[i]
+      if (phone) {
+        const phoneError = isValidPhoneNumber(phone)
+        if (phoneError) {
+          fieldErrors.value.emergencyPhoneNumbers = `Emergency phone #${i + 1}: ${phoneError}`
+          isValid = false
+          break
+        }
+      }
+    }
+  }
+
+  // Validate password
+  if (form.value.password) {
+    const passwordError = isValidOptionalPassword(form.value.password)
+    if (passwordError) {
+      fieldErrors.value.password = passwordError
+      isValid = false
+    }
+  }
+
+  return isValid
+}
+
+async function saveStudent() {
+  // Run field-level validation
+  if (!validateForm()) {
+    error.value = 'Please fix the errors below'
     return
   }
 
   const phones = form.value.phoneNumbers.filter((p) => p.trim())
   const emergencyPhones = form.value.emergencyPhoneNumbers.filter((p) => p.trim())
-
-  if (phones.length === 0) {
-    error.value = 'At least one phone number is required'
-    return
-  }
-
-  if (emergencyPhones.length === 0) {
-    error.value = 'At least one emergency phone number is required'
-    return
-  }
 
   loading.value = true
   error.value = ''
@@ -240,8 +309,8 @@ async function saveStudent() {
         nameLatin: form.value.nameLatin,
         gender: form.value.gender,
         dob: form.value.dob,
-        departmentId: form.value.departmentId,
-        programId: form.value.programId,
+        departmentId: form.value.departmentId!,
+        programId: form.value.programId!,
         personalEmail: form.value.personalEmail,
         phoneNumbers: phones,
         emergencyPhoneNumbers: emergencyPhones,
@@ -399,7 +468,14 @@ function getStatusClass(status: string) {
               </div>
               <div class="form-group">
                 <label>Date of Birth * (must be 16+)</label>
-                <input v-model="form.dob" type="date" required />
+                <input
+                  v-model="form.dob"
+                  type="date"
+                  required
+                  :class="{ 'input-error': fieldErrors.dob }"
+                  @input="clearFieldError('dob')"
+                />
+                <span v-if="fieldErrors.dob" class="field-error">{{ fieldErrors.dob }}</span>
               </div>
             </div>
           </div>
@@ -410,12 +486,18 @@ function getStatusClass(status: string) {
             <div class="form-row">
               <div class="form-group">
                 <label>Department *</label>
-                <select v-model.number="form.departmentId" required>
+                <select
+                  v-model.number="form.departmentId"
+                  required
+                  :class="{ 'input-error': fieldErrors.departmentId }"
+                  @change="clearFieldError('departmentId')"
+                >
                   <option :value="undefined" disabled>Select Department</option>
                   <option v-for="dept in departments" :key="dept.id" :value="dept.id">
                     {{ dept.name }}
                   </option>
                 </select>
+                <span v-if="fieldErrors.departmentId" class="field-error">{{ fieldErrors.departmentId }}</span>
               </div>
               <div class="form-group">
                 <label>Program *</label>
@@ -423,6 +505,8 @@ function getStatusClass(status: string) {
                   v-model.number="form.programId"
                   required
                   :disabled="!form.departmentId"
+                  :class="{ 'input-error': fieldErrors.programId }"
+                  @change="clearFieldError('programId')"
                 >
                   <option :value="undefined" disabled>Select Program</option>
                   <option
@@ -433,6 +517,7 @@ function getStatusClass(status: string) {
                     {{ prog.name }} ({{ prog.duration }} years)
                   </option>
                 </select>
+                <span v-if="fieldErrors.programId" class="field-error">{{ fieldErrors.programId }}</span>
               </div>
             </div>
             <div class="form-row" v-if="editingStudent">
@@ -483,7 +568,7 @@ function getStatusClass(status: string) {
                 placeholder="personal@email.com"
               />
             </div>
-            <div class="form-group">
+            <div class="form-group" :class="{ 'has-error': fieldErrors.phoneNumbers }">
               <label>Phone Numbers *</label>
               <div
                 v-for="(phone, idx) in form.phoneNumbers"
@@ -493,7 +578,9 @@ function getStatusClass(status: string) {
                 <input
                   v-model="form.phoneNumbers[idx]"
                   type="tel"
-                  placeholder="Phone number"
+                  placeholder="0XX XXX XXXX"
+                  :class="{ 'input-error': fieldErrors.phoneNumbers }"
+                  @input="clearFieldError('phoneNumbers')"
                 />
                 <button
                   type="button"
@@ -503,11 +590,12 @@ function getStatusClass(status: string) {
                   -
                 </button>
               </div>
+              <span v-if="fieldErrors.phoneNumbers" class="field-error">{{ fieldErrors.phoneNumbers }}</span>
               <button type="button" class="btn btn-sm" @click="addPhoneNumber">
                 + Add Phone
               </button>
             </div>
-            <div class="form-group">
+            <div class="form-group" :class="{ 'has-error': fieldErrors.emergencyPhoneNumbers }">
               <label>Emergency Phone Numbers *</label>
               <div
                 v-for="(phone, idx) in form.emergencyPhoneNumbers"
@@ -517,7 +605,9 @@ function getStatusClass(status: string) {
                 <input
                   v-model="form.emergencyPhoneNumbers[idx]"
                   type="tel"
-                  placeholder="Emergency phone"
+                  placeholder="0XX XXX XXXX"
+                  :class="{ 'input-error': fieldErrors.emergencyPhoneNumbers }"
+                  @input="clearFieldError('emergencyPhoneNumbers')"
                 />
                 <button
                   type="button"
@@ -527,6 +617,7 @@ function getStatusClass(status: string) {
                   -
                 </button>
               </div>
+              <span v-if="fieldErrors.emergencyPhoneNumbers" class="field-error">{{ fieldErrors.emergencyPhoneNumbers }}</span>
               <button type="button" class="btn btn-sm" @click="addEmergencyPhone">
                 + Add Emergency Phone
               </button>
@@ -536,7 +627,7 @@ function getStatusClass(status: string) {
           <!-- Password -->
           <div class="form-section">
             <h3>{{ editingStudent ? 'Change Password' : 'Initial Password' }}</h3>
-            <div class="form-group">
+            <div class="form-group" :class="{ 'has-error': fieldErrors.password }">
               <label>
                 Password
                 {{
@@ -550,7 +641,10 @@ function getStatusClass(status: string) {
                 type="password"
                 :required="false"
                 placeholder="••••••••"
+                :class="{ 'input-error': fieldErrors.password }"
+                @input="clearFieldError('password')"
               />
+              <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
             </div>
           </div>
 
@@ -803,6 +897,30 @@ function getStatusClass(status: string) {
   color: #b91c1c;
   border-radius: 4px;
   margin-bottom: 16px;
+}
+
+/* Field-level error styles */
+.input-error,
+.form-group input.input-error,
+.form-group select.input-error {
+  border-color: #dc3545 !important;
+  background-color: #fff5f5;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+  outline: none;
+}
+
+.field-error {
+  display: block;
+  color: #dc3545;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.form-group.has-error label {
+  color: #dc3545;
 }
 
 .loading,

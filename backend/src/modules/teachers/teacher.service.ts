@@ -73,6 +73,17 @@ export class TeacherService {
     });
   }
 
+  async findByUserId(userId: number): Promise<Teacher> {
+    const teacher = await this.teacherRepo.findOne({
+      where: { userId },
+      relations: ['department', 'user'],
+    });
+    if (!teacher) {
+      throw new NotFoundException('Teacher profile not found');
+    }
+    return teacher;
+  }
+
   async findOne(id: number): Promise<Teacher> {
     const teacher = await this.teacherRepo.findOne({
       where: { id },

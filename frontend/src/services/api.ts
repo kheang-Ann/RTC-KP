@@ -40,6 +40,12 @@ class ApiService {
       headers,
     })
 
+    // Handle 401 Unauthorized - session expired
+    if (response.status === 401) {
+      this.handleUnauthorized()
+      throw new Error('Session expired. Please login again.')
+    }
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }))
       throw new Error(error.message || `HTTP error! status: ${response.status}`)
@@ -51,6 +57,15 @@ class ApiService {
       return undefined as T
     }
     return JSON.parse(text)
+  }
+
+  private handleUnauthorized(): void {
+    // Clear token and user data
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    
+    // Redirect to login page
+    window.location.href = '/login'
   }
 
   get<T>(endpoint: string, options?: RequestOptions): Promise<T> {
@@ -95,6 +110,12 @@ class ApiService {
       headers,
       body: formData,
     })
+
+    // Handle 401 Unauthorized - session expired
+    if (response.status === 401) {
+      this.handleUnauthorized()
+      throw new Error('Session expired. Please login again.')
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }))

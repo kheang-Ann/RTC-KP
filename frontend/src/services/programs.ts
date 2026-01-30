@@ -1,4 +1,5 @@
 import api from './api'
+import { trimValue, isRequired, isValidLength } from '@/utils/validation'
 
 export interface Program {
   id: number
@@ -24,6 +25,19 @@ export interface UpdateProgramDto {
   departmentId?: number
 }
 
+// Validation helper
+function validateProgramName(name: string): void {
+  const trimmed = trimValue(name)
+  const requiredError = isRequired(trimmed, 'Program name')
+  if (requiredError) {
+    throw new Error(requiredError)
+  }
+  const lengthError = isValidLength(trimmed, 'Program name', 1, 100)
+  if (lengthError) {
+    throw new Error(lengthError)
+  }
+}
+
 export const programsService = {
   getAll(): Promise<Program[]> {
     return api.get<Program[]>('/programs')
@@ -38,11 +52,19 @@ export const programsService = {
   },
 
   create(data: CreateProgramDto): Promise<Program> {
-    return api.post<Program>('/programs', data)
+    const trimmedName = trimValue(data.name)
+    validateProgramName(trimmedName)
+    return api.post<Program>('/programs', { ...data, name: trimmedName })
   },
 
   update(id: number, data: UpdateProgramDto): Promise<Program> {
-    return api.patch<Program>(`/programs/${id}`, data)
+    const updateData: UpdateProgramDto = { ...data }
+    if (data.name) {
+      const trimmedName = trimValue(data.name)
+      validateProgramName(trimmedName)
+      updateData.name = trimmedName
+    }
+    return api.patch<Program>(`/programs/${id}`, updateData)
   },
 
   delete(id: number): Promise<void> {

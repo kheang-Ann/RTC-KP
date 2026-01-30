@@ -23,6 +23,7 @@ const StudentCoursesView = () => import('@/views/student/CoursesView.vue')
 const StudentLeaveRequestsView = () => import('@/views/student/LeaveRequestsView.vue')
 const TeacherLeaveRequestsView = () => import('@/views/teacher/LeaveRequestsView.vue')
 const AdminLeaveRequestsView = () => import('@/views/admin/LeaveRequestsView.vue')
+const ProfileView = () => import('@/views/ProfileView.vue')
 const RedirectView = () => import('@/views/RedirectView.vue')
 
 const router = createRouter({
@@ -96,6 +97,11 @@ const router = createRouter({
           name: 'admin-leave-requests',
           component: AdminLeaveRequestsView,
         },
+        {
+          path: 'profile',
+          name: 'admin-profile',
+          component: ProfileView,
+        },
       ],
     },
 
@@ -130,6 +136,11 @@ const router = createRouter({
           name: 'teacher-leave-requests',
           component: TeacherLeaveRequestsView,
         },
+        {
+          path: 'profile',
+          name: 'teacher-profile',
+          component: ProfileView,
+        },
       ],
     },
 
@@ -163,6 +174,11 @@ const router = createRouter({
           path: 'leave-requests',
           name: 'student-leave-requests',
           component: StudentLeaveRequestsView,
+        },
+        {
+          path: 'profile',
+          name: 'student-profile',
+          component: ProfileView,
         },
       ],
     },

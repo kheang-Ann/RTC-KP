@@ -103,6 +103,17 @@ export class StudentService {
     });
   }
 
+  async findByUserId(userId: number): Promise<Student> {
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+      relations: ['department', 'program', 'user'],
+    });
+    if (!student) {
+      throw new NotFoundException('Student profile not found');
+    }
+    return student;
+  }
+
   async findOne(id: number): Promise<Student> {
     const student = await this.studentRepo.findOne({
       where: { id },

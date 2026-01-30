@@ -7,13 +7,24 @@ const route = useRoute()
 const router = useRouter()
 
 const user = computed(() => authService.getUser())
-const userInitial = computed(() => user.value?.email?.charAt(0).toUpperCase() || 'U')
-const userRole = computed(() => {
+const userInitial = computed(() => {
+  const u = user.value
+  if (u?.nameLatin) return u.nameLatin.charAt(0).toUpperCase()
+  if (u?.nameKhmer) return u.nameKhmer.charAt(0).toUpperCase()
+  return u?.email?.charAt(0).toUpperCase() || 'U'
+})
+
+const userName = computed(() => {
+  const u = user.value
+  return u?.nameLatin || u?.nameKhmer || u?.email || 'User'
+})
+
+const profilePath = computed(() => {
   const roles = user.value?.roles || []
-  if (roles.includes('admin')) return 'Admin'
-  if (roles.includes('teacher')) return 'Teacher'
-  if (roles.includes('student')) return 'Student'
-  return 'User'
+  if (roles.includes('admin')) return '/admin/profile'
+  if (roles.includes('teacher')) return '/teacher/profile'
+  if (roles.includes('student')) return '/student/profile'
+  return '/login'
 })
 
 interface MenuItem {
@@ -35,18 +46,21 @@ const menuItems: MenuItem[] = [
   { name: 'Leave Requests', path: '/admin/leave-requests', icon: '📝', roles: ['admin'] },
   { name: 'Sessions', path: '/admin/sessions', icon: '📅', roles: ['admin'] },
   { name: 'Attendance', path: '/admin/attendance', icon: '✅', roles: ['admin'] },
+  { name: 'Profile', path: '/admin/profile', icon: '👤', roles: ['admin'] },
   // Teacher menu items
   { name: 'Dashboard', path: '/teacher/dashboard', icon: '🏠', roles: ['teacher'] },
   { name: 'Sessions', path: '/teacher/sessions', icon: '📅', roles: ['teacher'] },
   { name: 'Attendance', path: '/teacher/attendance', icon: '✅', roles: ['teacher'] },
   { name: 'Students', path: '/teacher/students', icon: '🎓', roles: ['teacher'] },
   { name: 'Leave Requests', path: '/teacher/leave-requests', icon: '📝', roles: ['teacher'] },
+  { name: 'Profile', path: '/teacher/profile', icon: '👤', roles: ['teacher'] },
   // Student menu items
   { name: 'Dashboard', path: '/student/dashboard', icon: '🏠', roles: ['student'] },
   { name: 'Check In', path: '/student/check-in', icon: '✓', roles: ['student'] },
   { name: 'My Attendance', path: '/student/attendance', icon: '📊', roles: ['student'] },
   { name: 'My Courses', path: '/student/courses', icon: '📚', roles: ['student'] },
   { name: 'Leave Requests', path: '/student/leave-requests', icon: '📝', roles: ['student'] },
+  { name: 'Profile', path: '/student/profile', icon: '👤', roles: ['student'] },
 ]
 
 const visibleMenuItems = computed(() => {
@@ -94,8 +108,10 @@ function logout() {
       <header class="navbar">
         <h1 class="navbar-title">Student Management System</h1>
         <div class="navbar-user">
-          <div class="user-avatar">{{ userInitial }}</div>
-          <span class="user-role">{{ userRole }}</span>
+          <router-link :to="profilePath" class="user-profile-link">
+            <div class="user-avatar">{{ userInitial }}</div>
+            <span class="user-name">{{ userName }}</span>
+          </router-link>
           <button class="logout-btn" @click="logout">Logout</button>
         </div>
       </header>
@@ -201,6 +217,20 @@ function logout() {
   gap: 12px;
 }
 
+.user-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.user-profile-link:hover {
+  background: #f3f4f6;
+}
+
 .user-avatar {
   width: 36px;
   height: 36px;
@@ -214,7 +244,7 @@ function logout() {
   font-size: 14px;
 }
 
-.user-role {
+.user-name {
   font-weight: 500;
   color: #374151;
 }

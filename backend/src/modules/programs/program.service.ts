@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Program } from './entities/program.entity';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
@@ -13,6 +17,15 @@ export class ProgramService {
   ) {}
 
   async create(dto: CreateProgramDto): Promise<Program> {
+    // Check for duplicate name
+    const existing = await this.programRepo.findOne({
+      where: { name: dto.name.trim() },
+    });
+    if (existing) {
+      throw new ConflictException(
+        `Program with name '${dto.name}' already exists`,
+      );
+    }
     const program = this.programRepo.create(dto);
     return this.programRepo.save(program);
   }
@@ -45,6 +58,17 @@ export class ProgramService {
 
   async update(id: number, dto: UpdateProgramDto): Promise<Program> {
     const program = await this.findOne(id);
+    // Check for duplicate name (excluding current program)
+    if (dto.name) {
+      const existing = await this.programRepo.findOne({
+        where: { name: dto.name.trim(), id: Not(id) },
+      });
+      if (existing) {
+        throw new ConflictException(
+          `Program with name '${dto.name}' already exists`,
+        );
+      }
+    }
     Object.assign(program, dto);
     return this.programRepo.save(program);
   }

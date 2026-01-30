@@ -93,8 +93,8 @@ function formatDateTime(dateStr: string) {
     <template v-else>
       <!-- Stats Cards -->
       <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-value border-left-blue">{{ stats.totalCourses }}</div>
+        <div class="stat-card border-left-blue">
+          <div class="stat-value">{{ stats.totalCourses }}</div>
           <div class="stat-label">My Courses</div>
         </div>
         <div class="stat-card border-left-lightblue">
@@ -130,6 +130,10 @@ function formatDateTime(dateStr: string) {
           <router-link to="/teacher/students" class="action-card">
             <span class="action-icon">👥</span>
             <span class="action-label">View Students</span>
+          </router-link>
+          <router-link to="/teacher/leave-requests" class="action-card">
+            <span class="action-icon">📝</span>
+            <span class="action-label">Leave Requests</span>
           </router-link>
         </div>
       </div>

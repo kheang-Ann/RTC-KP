@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { Department } from './entity/department.entity';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
@@ -9,6 +13,17 @@ export class DepartmentService {
   private departmentRepo: Repository<Department>;
 
   async Create(dto: Partial<Department>) {
+    // Check for duplicate name
+    if (dto.name) {
+      const existing = await this.departmentRepo.findOne({
+        where: { name: dto.name.trim() },
+      });
+      if (existing) {
+        throw new ConflictException(
+          `Department with name '${dto.name}' already exists`,
+        );
+      }
+    }
     const newDepartment = this.departmentRepo.create(dto);
     return this.departmentRepo.save(newDepartment);
   }
@@ -41,6 +56,17 @@ export class DepartmentService {
     const department = await this.departmentRepo.findOne({ where: { id } });
     if (!department) {
       throw new NotFoundException(`Department with id ${id} not found`);
+    }
+    // Check for duplicate name (excluding current department)
+    if (dto.name) {
+      const existing = await this.departmentRepo.findOne({
+        where: { name: dto.name.trim(), id: Not(id) },
+      });
+      if (existing) {
+        throw new ConflictException(
+          `Department with name '${dto.name}' already exists`,
+        );
+      }
     }
     Object.assign(department, dto);
     return this.departmentRepo.save(department);

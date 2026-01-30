@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { attendanceService } from '@/services/attendance'
+import { isValidAttendanceCode } from '@/utils/validation'
 
 const code = ref('')
 const loading = ref(false)
@@ -8,9 +9,21 @@ const error = ref('')
 const success = ref(false)
 const checkInResult = ref<{ courseName?: string; sessionTitle?: string } | null>(null)
 
+// Real-time validation
+const codeError = computed(() => {
+  if (!code.value.trim()) return ''
+  return isValidAttendanceCode(code.value) || ''
+})
+
+const isCodeValid = computed(() => {
+  return code.value.trim() !== '' && !isValidAttendanceCode(code.value)
+})
+
 async function handleCheckIn() {
-  if (!code.value.trim()) {
-    error.value = 'Please enter an attendance code'
+  // Validate before submission
+  const validationError = isValidAttendanceCode(code.value)
+  if (validationError) {
+    error.value = validationError
     return
   }
 
@@ -64,14 +77,16 @@ function resetForm() {
             v-model="code"
             type="text"
             class="code-input"
+            :class="{ 'input-error': codeError, 'input-valid': isCodeValid }"
             placeholder="Enter 6-digit code"
             maxlength="8"
             autocomplete="off"
             :disabled="loading"
           />
+          <p v-if="codeError" class="field-error">{{ codeError }}</p>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block" :disabled="loading || !code.trim()">
+        <button type="submit" class="btn btn-primary btn-block" :disabled="loading || !isCodeValid">
           {{ loading ? 'Checking in...' : 'Check In' }}
         </button>
       </form>
@@ -135,6 +150,21 @@ h1 {
 .code-input:focus {
   outline: none;
   border-color: #007bff;
+}
+
+.code-input.input-error {
+  border-color: #dc3545;
+}
+
+.code-input.input-valid {
+  border-color: #28a745;
+}
+
+.field-error {
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  text-align: center;
 }
 
 .code-input::placeholder {

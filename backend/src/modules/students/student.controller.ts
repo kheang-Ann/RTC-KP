@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Body,
   Controller,
@@ -10,6 +12,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { StudentService } from './student.service';
@@ -40,6 +43,12 @@ export class StudentController {
   @Get()
   async findAll() {
     return this.studentService.findAll();
+  }
+
+  @Roles('student')
+  @Get('me')
+  async getMyProfile(@Request() req) {
+    return this.studentService.findByUserId(req.user.id);
   }
 
   @Roles('admin', 'teacher')

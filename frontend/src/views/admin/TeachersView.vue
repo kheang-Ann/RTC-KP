@@ -7,6 +7,7 @@ import {
   type UpdateTeacherDto,
 } from '@/services/teachers'
 import { departmentsService, type Department } from '@/services/departments'
+import { isValidPhoneNumber, isValidOptionalPassword } from '@/utils/validation'
 
 const teachers = ref<Teacher[]>([])
 const departments = ref<Department[]>([])
@@ -18,6 +19,16 @@ const editingTeacher = ref<Teacher | null>(null)
 // Image handling
 const imageFile = ref<File | null>(null)
 const imagePreview = ref<string | null>(null)
+
+// Field-level errors
+const fieldErrors = ref<Record<string, string>>({})
+
+// Clear field error when user starts typing
+function clearFieldError(field: string) {
+  if (fieldErrors.value[field]) {
+    delete fieldErrors.value[field]
+  }
+}
 
 const form = ref({
   nameKhmer: '',
@@ -121,7 +132,55 @@ function removePhoneNumber(index: number) {
   }
 }
 
+// Validate all fields and return true if valid
+function validateForm(): boolean {
+  fieldErrors.value = {}
+  let isValid = true
+
+  // Validate department
+  if (!form.value.departmentId) {
+    fieldErrors.value.departmentId = 'Department is required'
+    isValid = false
+  }
+
+  // Validate phone numbers
+  const phones = form.value.phoneNumbers.filter((p) => p.trim())
+  if (phones.length === 0) {
+    fieldErrors.value.phoneNumbers = 'At least one phone number is required'
+    isValid = false
+  } else {
+    for (let i = 0; i < phones.length; i++) {
+      const phone = phones[i]
+      if (phone) {
+        const phoneError = isValidPhoneNumber(phone)
+        if (phoneError) {
+          fieldErrors.value.phoneNumbers = `Phone #${i + 1}: ${phoneError}`
+          isValid = false
+          break
+        }
+      }
+    }
+  }
+
+  // Validate password
+  if (form.value.password) {
+    const passwordError = isValidOptionalPassword(form.value.password)
+    if (passwordError) {
+      fieldErrors.value.password = passwordError
+      isValid = false
+    }
+  }
+
+  return isValid
+}
+
 async function saveTeacher() {
+  // Run field-level validation
+  if (!validateForm()) {
+    error.value = 'Please fix the errors below'
+    return
+  }
+
   loading.value = true
   error.value = ''
   try {
@@ -306,12 +365,20 @@ function getDepartmentName(departmentId: number | undefined): string {
             <h3>🏢 Department</h3>
             <div class="form-group">
               <label>Department *</label>
-              <select v-model.number="form.departmentId" required>
+              <select
+                v-model.number="form.departmentId"
+                required
+                :class="{ 'input-error': fieldErrors.departmentId }"
+                @change="clearFieldError('departmentId')"
+              >
                 <option :value="undefined" disabled>Select department</option>
                 <option v-for="dept in departments" :key="dept.id" :value="dept.id">
                   {{ dept.name }}
                 </option>
               </select>
+              <span v-if="fieldErrors.departmentId" class="field-error">
+                {{ fieldErrors.departmentId }}
+              </span>
             </div>
           </div>
 
@@ -338,6 +405,8 @@ function getDepartmentName(departmentId: number | undefined): string {
                   v-model="form.phoneNumbers[index]"
                   type="tel"
                   placeholder="Phone number"
+                  :class="{ 'input-error': fieldErrors.phoneNumbers }"
+                  @input="clearFieldError('phoneNumbers')"
                 />
                 <button
                   v-if="form.phoneNumbers.length > 1"
@@ -348,6 +417,9 @@ function getDepartmentName(departmentId: number | undefined): string {
                   ✕
                 </button>
               </div>
+              <span v-if="fieldErrors.phoneNumbers" class="field-error">
+                {{ fieldErrors.phoneNumbers }}
+              </span>
               <button type="button" class="btn btn-sm" @click="addPhoneNumber">
                 + Add Phone
               </button>
@@ -366,7 +438,12 @@ function getDepartmentName(departmentId: number | undefined): string {
                 type="password"
                 :required="!editingTeacher"
                 placeholder="••••••••"
+                :class="{ 'input-error': fieldErrors.password }"
+                @input="clearFieldError('password')"
               />
+              <span v-if="fieldErrors.password" class="field-error">
+                {{ fieldErrors.password }}
+              </span>
             </div>
           </div>
 
@@ -640,5 +717,18 @@ function getDepartmentName(departmentId: number | undefined): string {
   color: #6b7280;
   background: white;
   border-radius: 8px;
+}
+
+/* Field error styles */
+.input-error {
+  border-color: #dc2626 !important;
+  background-color: #fef2f2 !important;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+  display: block;
 }
 </style>

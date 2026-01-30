@@ -1,4 +1,5 @@
 import api from './api'
+import { trimValue, isRequired, isValidLength } from '@/utils/validation'
 
 export interface Course {
   id: string
@@ -22,6 +23,32 @@ export interface CreateCourseDto {
 
 export type UpdateCourseDto = Partial<CreateCourseDto>
 
+// Validation helper for course name
+function validateCourseName(name: string): void {
+  const trimmed = trimValue(name)
+  const requiredError = isRequired(trimmed, 'Course name')
+  if (requiredError) {
+    throw new Error(requiredError)
+  }
+  const lengthError = isValidLength(trimmed, 'Course name', 1, 100)
+  if (lengthError) {
+    throw new Error(lengthError)
+  }
+}
+
+// Validation helper for course code
+function validateCourseCode(code: string): void {
+  const trimmed = trimValue(code)
+  const requiredError = isRequired(trimmed, 'Course code')
+  if (requiredError) {
+    throw new Error(requiredError)
+  }
+  const lengthError = isValidLength(trimmed, 'Course code', 1, 20)
+  if (lengthError) {
+    throw new Error(lengthError)
+  }
+}
+
 export const coursesService = {
   getAll(): Promise<Course[]> {
     return api.get<Course[]>('/courses')
@@ -37,11 +64,26 @@ export const coursesService = {
   },
 
   create(data: CreateCourseDto): Promise<Course> {
-    return api.post<Course>('/courses', data)
+    const trimmedName = trimValue(data.name)
+    const trimmedCode = trimValue(data.code).toUpperCase()
+    validateCourseName(trimmedName)
+    validateCourseCode(trimmedCode)
+    return api.post<Course>('/courses', { ...data, name: trimmedName, code: trimmedCode })
   },
 
   update(id: string, data: UpdateCourseDto): Promise<Course> {
-    return api.patch<Course>(`/courses/${id}`, data)
+    const updateData: UpdateCourseDto = { ...data }
+    if (data.name) {
+      const trimmedName = trimValue(data.name)
+      validateCourseName(trimmedName)
+      updateData.name = trimmedName
+    }
+    if (data.code) {
+      const trimmedCode = trimValue(data.code).toUpperCase()
+      validateCourseCode(trimmedCode)
+      updateData.code = trimmedCode
+    }
+    return api.patch<Course>(`/courses/${id}`, updateData)
   },
 
   delete(id: string): Promise<void> {

@@ -83,15 +83,15 @@ function formatDate(dateStr?: string) {
     <template v-else>
       <!-- Stats Cards -->
       <div class="stats-grid">
-        <div class="stat-card">
+        <div class="stat-card border-left-blue">
           <div class="stat-value">{{ enrollments.length }}</div>
           <div class="stat-label">Enrolled Courses</div>
         </div>
-        <div class="stat-card border-left-blue">
+        <div class="stat-card border-left-lightblue">
           <div class="stat-value">{{ stats.attendanceRate }}%</div>
           <div class="stat-label">Attendance Rate</div>
         </div>
-        <div class="stat-card stat-success">
+        <div class="stat-card border-left-green stat-success">
           <div class="stat-value">{{ stats.present }}</div>
           <div class="stat-label">Present</div>
         </div>
@@ -120,6 +120,10 @@ function formatDate(dateStr?: string) {
           <router-link to="/student/courses" class="action-card">
             <span class="action-icon">📚</span>
             <span class="action-label">My Courses</span>
+          </router-link>
+          <router-link to="/student/leave-requests" class="action-card">
+            <span class="action-icon">📝</span>
+            <span class="action-label">Leave Requests</span>
           </router-link>
         </div>
       </div>

@@ -1,4 +1,10 @@
 import api from './api'
+import {
+  isValidPhoneNumbers,
+  isValidOptionalPassword,
+  trimValue,
+  normalizePhoneArray,
+} from '@/utils/validation'
 
 export interface Student {
   id: number
@@ -51,9 +57,53 @@ export interface UpdateStudentDto {
   password?: string
 }
 
+// Validation helper for create
+function validateCreateStudent(data: CreateStudentDto): void {
+  const phoneError = isValidPhoneNumbers(data.phoneNumbers, 'Phone number')
+  if (phoneError) {
+    throw new Error(phoneError)
+  }
+  const emergencyPhoneError = isValidPhoneNumbers(data.emergencyPhoneNumbers, 'Emergency phone number')
+  if (emergencyPhoneError) {
+    throw new Error(emergencyPhoneError)
+  }
+  if (data.password) {
+    const passwordError = isValidOptionalPassword(data.password)
+    if (passwordError) {
+      throw new Error(passwordError)
+    }
+  }
+}
+
+// Validation helper for update
+function validateUpdateStudent(data: UpdateStudentDto): void {
+  if (data.phoneNumbers) {
+    const phoneError = isValidPhoneNumbers(data.phoneNumbers, 'Phone number')
+    if (phoneError) {
+      throw new Error(phoneError)
+    }
+  }
+  if (data.emergencyPhoneNumbers) {
+    const emergencyPhoneError = isValidPhoneNumbers(data.emergencyPhoneNumbers, 'Emergency phone number')
+    if (emergencyPhoneError) {
+      throw new Error(emergencyPhoneError)
+    }
+  }
+  if (data.password) {
+    const passwordError = isValidOptionalPassword(data.password)
+    if (passwordError) {
+      throw new Error(passwordError)
+    }
+  }
+}
+
 export const studentsService = {
   getAll(): Promise<Student[]> {
     return api.get<Student[]>('/students')
+  },
+
+  getMyProfile(): Promise<Student> {
+    return api.get<Student>('/students/me')
   },
 
   getOne(id: number): Promise<Student> {
@@ -61,18 +111,32 @@ export const studentsService = {
   },
 
   create(data: CreateStudentDto, image?: File): Promise<Student> {
+    // Trim values and normalize phone numbers
+    const trimmedData = {
+      ...data,
+      nameKhmer: trimValue(data.nameKhmer),
+      nameLatin: trimValue(data.nameLatin),
+      personalEmail: trimValue(data.personalEmail),
+      phoneNumbers: normalizePhoneArray(data.phoneNumbers),
+      emergencyPhoneNumbers: normalizePhoneArray(data.emergencyPhoneNumbers),
+      password: data.password ? trimValue(data.password) : undefined,
+    }
+
+    // Validate
+    validateCreateStudent(trimmedData)
+
     const formData = new FormData()
-    formData.append('nameKhmer', data.nameKhmer)
-    formData.append('nameLatin', data.nameLatin)
+    formData.append('nameKhmer', trimmedData.nameKhmer)
+    formData.append('nameLatin', trimmedData.nameLatin)
     formData.append('gender', data.gender)
     formData.append('dob', data.dob)
     formData.append('departmentId', data.departmentId.toString())
     formData.append('programId', data.programId.toString())
-    formData.append('personalEmail', data.personalEmail)
-    formData.append('phoneNumbers', JSON.stringify(data.phoneNumbers))
-    formData.append('emergencyPhoneNumbers', JSON.stringify(data.emergencyPhoneNumbers))
-    if (data.password) {
-      formData.append('password', data.password)
+    formData.append('personalEmail', trimmedData.personalEmail)
+    formData.append('phoneNumbers', JSON.stringify(trimmedData.phoneNumbers))
+    formData.append('emergencyPhoneNumbers', JSON.stringify(trimmedData.emergencyPhoneNumbers))
+    if (trimmedData.password) {
+      formData.append('password', trimmedData.password)
     }
     if (image) {
       formData.append('image', image)
@@ -81,21 +145,36 @@ export const studentsService = {
   },
 
   update(id: number, data: UpdateStudentDto, image?: File): Promise<Student> {
+    // Trim values and normalize phone numbers
+    const trimmedData: UpdateStudentDto = {
+      ...data,
+      nameKhmer: data.nameKhmer ? trimValue(data.nameKhmer) : undefined,
+      nameLatin: data.nameLatin ? trimValue(data.nameLatin) : undefined,
+      personalEmail: data.personalEmail ? trimValue(data.personalEmail) : undefined,
+      email: data.email ? trimValue(data.email) : undefined,
+      phoneNumbers: data.phoneNumbers ? normalizePhoneArray(data.phoneNumbers) : undefined,
+      emergencyPhoneNumbers: data.emergencyPhoneNumbers ? normalizePhoneArray(data.emergencyPhoneNumbers) : undefined,
+      password: data.password ? trimValue(data.password) : undefined,
+    }
+
+    // Validate
+    validateUpdateStudent(trimmedData)
+
     const formData = new FormData()
-    if (data.nameKhmer) formData.append('nameKhmer', data.nameKhmer)
-    if (data.nameLatin) formData.append('nameLatin', data.nameLatin)
+    if (trimmedData.nameKhmer) formData.append('nameKhmer', trimmedData.nameKhmer)
+    if (trimmedData.nameLatin) formData.append('nameLatin', trimmedData.nameLatin)
     if (data.gender) formData.append('gender', data.gender)
     if (data.dob) formData.append('dob', data.dob)
     if (data.departmentId) formData.append('departmentId', data.departmentId.toString())
     if (data.programId) formData.append('programId', data.programId.toString())
     if (data.academicStatus) formData.append('academicStatus', data.academicStatus)
     if (data.academicYear) formData.append('academicYear', data.academicYear.toString())
-    if (data.email) formData.append('email', data.email)
-    if (data.personalEmail) formData.append('personalEmail', data.personalEmail)
-    if (data.phoneNumbers) formData.append('phoneNumbers', JSON.stringify(data.phoneNumbers))
-    if (data.emergencyPhoneNumbers)
-      formData.append('emergencyPhoneNumbers', JSON.stringify(data.emergencyPhoneNumbers))
-    if (data.password) formData.append('password', data.password)
+    if (trimmedData.email) formData.append('email', trimmedData.email)
+    if (trimmedData.personalEmail) formData.append('personalEmail', trimmedData.personalEmail)
+    if (trimmedData.phoneNumbers) formData.append('phoneNumbers', JSON.stringify(trimmedData.phoneNumbers))
+    if (trimmedData.emergencyPhoneNumbers)
+      formData.append('emergencyPhoneNumbers', JSON.stringify(trimmedData.emergencyPhoneNumbers))
+    if (trimmedData.password) formData.append('password', trimmedData.password)
     if (image) formData.append('image', image)
     return api.patchFormData<Student>(`/students/${id}`, formData)
   },

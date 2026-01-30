@@ -10,6 +10,7 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
+  Request,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TeacherService } from './teacher.service';
@@ -40,6 +41,12 @@ export class TeacherController {
   @Get()
   async findAll() {
     return this.teacherService.findAll();
+  }
+
+  @Roles('teacher')
+  @Get('me')
+  async getMyProfile(@Request() req) {
+    return this.teacherService.findByUserId(req.user.id);
   }
 
   @Roles('admin')

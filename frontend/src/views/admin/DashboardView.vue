@@ -124,29 +124,41 @@ function formatDate(dateStr?: string) {
       <div class="section">
         <h2>Quick Actions</h2>
         <div class="quick-actions">
-          <router-link to="/admin/users" class="action-card">
-            <span class="action-icon">👤</span>
-            <span class="action-label">Manage Users</span>
+          <router-link to="/admin/students" class="action-card">
+            <span class="action-icon">👨‍🎓</span>
+            <span class="action-label">Manage Students</span>
           </router-link>
-          <router-link to="/admin/courses" class="action-card">
-            <span class="action-icon">📚</span>
-            <span class="action-label">Manage Courses</span>
+          <router-link to="/admin/teachers" class="action-card">
+            <span class="action-icon">👨‍🏫</span>
+            <span class="action-label">Manage Teachers</span>
           </router-link>
           <router-link to="/admin/departments" class="action-card">
             <span class="action-icon">🏢</span>
             <span class="action-label">Manage Departments</span>
           </router-link>
+          <router-link to="/admin/programs" class="action-card">
+            <span class="action-icon">🎓</span>
+            <span class="action-label">Manage Programs</span>
+          </router-link>
+          <router-link to="/admin/courses" class="action-card">
+            <span class="action-icon">📚</span>
+            <span class="action-label">Manage Courses</span>
+          </router-link>
+          <router-link to="/admin/sessions" class="action-card">
+            <span class="action-icon">📅</span>
+            <span class="action-label">Manage Sessions</span>
+          </router-link>
           <router-link to="/admin/enrollments" class="action-card">
             <span class="action-icon">📋</span>
             <span class="action-label">Manage Enrollments</span>
           </router-link>
-          <router-link to="/teacher/sessions" class="action-card">
-            <span class="action-icon">📅</span>
-            <span class="action-label">View Sessions</span>
-          </router-link>
-          <router-link to="/teacher/attendance" class="action-card">
+          <router-link to="/admin/attendance" class="action-card">
             <span class="action-icon">✅</span>
-            <span class="action-label">View Attendance</span>
+            <span class="action-label">Manage Attendance</span>
+          </router-link>
+          <router-link to="/admin/leave-requests" class="action-card">
+            <span class="action-icon">📄</span>
+            <span class="action-label">Leave Requests</span>
           </router-link>
         </div>
       </div>
