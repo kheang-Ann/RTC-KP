@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { enrollmentsService, type Enrollment, type CreateEnrollmentDto } from '@/services/enrollments'
+import { enrollmentsService, type Enrollment, type CreateEnrollmentDto, type EnrollmentStatus, ENROLLMENT_STATUS_OPTIONS } from '@/services/enrollments'
 import { coursesService, type Course } from '@/services/courses'
 import { usersService, type User, hasRole } from '@/services/users'
 
@@ -86,21 +86,6 @@ async function enrollStudent() {
   }
 }
 
-async function updateStatus(enrollment: Enrollment, status: 'active' | 'completed' | 'dropped') {
-  loading.value = true
-  error.value = ''
-  try {
-    await enrollmentsService.update(enrollment.id, { status })
-    successMessage.value = 'Status updated successfully!'
-    setTimeout(() => (successMessage.value = ''), 3000)
-    await loadData()
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
 async function removeEnrollment(id: string) {
   if (!confirm('Are you sure you want to remove this enrollment?')) return
 
@@ -118,16 +103,18 @@ async function removeEnrollment(id: string) {
   }
 }
 
-function getStatusClass(status: string) {
-  switch (status) {
-    case 'active':
-      return 'status-active'
-    case 'completed':
-      return 'status-completed'
-    case 'dropped':
-      return 'status-dropped'
-    default:
-      return ''
+async function updateEnrollmentStatus(enrollmentId: string, newStatus: EnrollmentStatus) {
+  loading.value = true
+  error.value = ''
+  try {
+    await enrollmentsService.update(enrollmentId, { status: newStatus })
+    successMessage.value = 'Enrollment status updated successfully!'
+    setTimeout(() => (successMessage.value = ''), 3000)
+    await loadData()
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    loading.value = false
   }
 }
 
@@ -175,25 +162,27 @@ function formatDate(dateString: string) {
       </thead>
       <tbody>
         <tr v-for="enrollment in filteredEnrollments" :key="enrollment.id">
-          <td>{{ enrollment.student?.firstName }} {{ enrollment.student?.lastName }}</td>
+          <td>{{ enrollment.student?.nameLatin || enrollment.student?.nameKhmer || '-' }}</td>
           <td>{{ enrollment.student?.email }}</td>
           <td>{{ enrollment.course?.code || enrollment.course?.name }} - {{ enrollment.course?.name }}</td>
           <td>{{ formatDate(enrollment.enrolledAt) }}</td>
           <td>
-            <span class="status-badge" :class="getStatusClass(enrollment.status)">
-              {{ enrollment.status }}
-            </span>
+            <select
+              class="status-select"
+              :class="`status-${enrollment.status}`"
+              :value="enrollment.status"
+              @change="updateEnrollmentStatus(enrollment.id, ($event.target as HTMLSelectElement).value as EnrollmentStatus)"
+            >
+              <option
+                v-for="option in ENROLLMENT_STATUS_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
           </td>
           <td class="actions">
-            <select
-              :value="enrollment.status"
-              @change="updateStatus(enrollment, ($event.target as HTMLSelectElement).value as 'active' | 'completed' | 'dropped')"
-              class="status-select"
-            >
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="dropped">Dropped</option>
-            </select>
             <button class="btn btn-sm btn-danger" @click="removeEnrollment(enrollment.id)">
               Remove
             </button>
@@ -225,7 +214,7 @@ function formatDate(dateString: string) {
             <select v-model="form.studentId" required>
               <option :value="0" disabled>Select a student</option>
               <option v-for="student in availableStudents" :key="student.id" :value="student.id">
-                {{ student.firstName }} {{ student.lastName }} ({{ student.email }})
+                {{ student.nameLatin || student.nameKhmer || '-' }} ({{ student.email }})
               </option>
             </select>
             <small v-if="form.courseId && availableStudents.length === 0" class="text-muted">
@@ -275,7 +264,7 @@ function formatDate(dateString: string) {
 
 .filter-group label {
   font-size: 14px;
-  color: #666;
+  color: var(--color-grey);
 }
 
 .filter-group select {
@@ -301,12 +290,6 @@ function formatDate(dateString: string) {
   background-color: #efe;
   color: #060;
   border: 1px solid #cfc;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: #666;
 }
 
 .table {
@@ -362,6 +345,31 @@ function formatDate(dateString: string) {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.status-select.status-active {
+  background: #e3f2fd;
+  color: #1976d2;
+  border-color: #90caf9;
+}
+
+.status-select.status-completed {
+  background: #e8f5e9;
+  color: #388e3c;
+  border-color: #a5d6a7;
+}
+
+.status-select.status-failed {
+  background: #ffebee;
+  color: #d32f2f;
+  border-color: #ef9a9a;
+}
+
+.status-select.status-dropped {
+  background: #fff3e0;
+  color: #f57c00;
+  border-color: #ffcc80;
 }
 
 .actions {
@@ -380,7 +388,7 @@ function formatDate(dateString: string) {
 }
 
 .btn-primary {
-  background: #4f46e5;
+  background: var(--color-purple);
   color: white;
 }
 
@@ -399,7 +407,7 @@ function formatDate(dateString: string) {
 }
 
 .btn-danger {
-  background: #ef4444;
+  background: var(--color-light-red);
   color: white;
 }
 
@@ -407,11 +415,12 @@ function formatDate(dateString: string) {
   background: #dc2626;
 }
 
+.loading,
 .empty {
   text-align: center;
   padding: 60px 20px;
-  color: #666;
-  background: #f9f9f9;
+  color: #6b7280;
+  background: white;
   border-radius: 8px;
 }
 
@@ -465,7 +474,7 @@ function formatDate(dateString: string) {
 }
 
 .text-muted {
-  color: #666;
+  color: var(--color-grey);
 }
 
 .modal-actions {

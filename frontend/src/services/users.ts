@@ -7,9 +7,9 @@ export interface UserRole {
 
 export interface User {
   id: number
-  firstName: string
-  lastName: string
   email: string
+  nameKhmer: string | null
+  nameLatin: string | null
   isActive: boolean
   departmentId?: number
   roles: UserRole[] | string[]
@@ -28,8 +28,6 @@ export function hasRole(user: User, roleName: string): boolean {
 }
 
 export interface CreateUserDto {
-  firstName: string
-  lastName: string
   email: string
   password: string
   roleId: number
@@ -37,8 +35,6 @@ export interface CreateUserDto {
 }
 
 export interface UpdateUserDto {
-  firstName?: string
-  lastName?: string
   email?: string
   password?: string
   isActive?: boolean

@@ -83,7 +83,7 @@ function formatDateTime(dateStr: string) {
 
 <template>
   <div class="teacher-dashboard">
-    <h1>Welcome, {{ user?.firstName }} {{ user?.lastName }}</h1>
+    <h1>Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
     <p class="subtitle">Teacher Dashboard</p>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -94,22 +94,22 @@ function formatDateTime(dateStr: string) {
       <!-- Stats Cards -->
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-value">{{ stats.totalCourses }}</div>
+          <div class="stat-value border-left-blue">{{ stats.totalCourses }}</div>
           <div class="stat-label">My Courses</div>
         </div>
-        <div class="stat-card stat-primary">
-          <div class="stat-value">{{ stats.totalSessions }}</div>
+        <div class="stat-card border-left-lightblue">
+          <div class="stat-value ">{{ stats.totalSessions }}</div>
           <div class="stat-label">Total Sessions</div>
         </div>
-        <div class="stat-card stat-success">
+        <div class="stat-card border-left-green">
           <div class="stat-value">{{ stats.activeSessions }}</div>
           <div class="stat-label">Active Now</div>
         </div>
-        <div class="stat-card stat-warning">
+        <div class="stat-card border-left-orange">
           <div class="stat-value">{{ stats.scheduledSessions }}</div>
           <div class="stat-label">Scheduled</div>
         </div>
-        <div class="stat-card stat-info">
+        <div class="stat-card border-left-lightpurple">
           <div class="stat-value">{{ stats.completedSessions }}</div>
           <div class="stat-label">Completed</div>
         </div>
@@ -211,7 +211,7 @@ h1 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 1.5rem;
 }
 
@@ -233,29 +233,13 @@ h1 {
 .stat-value {
   font-size: 2rem;
   font-weight: bold;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 .stat-label {
-  color: #666;
+  color: var(--color-grey);
   font-size: 0.875rem;
   margin-top: 0.25rem;
-}
-
-.stat-primary {
-  border-left: 4px solid #4f46e5;
-}
-
-.stat-success {
-  border-left: 4px solid #22c55e;
-}
-
-.stat-warning {
-  border-left: 4px solid #f59e0b;
-}
-
-.stat-info {
-  border-left: 4px solid #3b82f6;
 }
 
 .section {
@@ -265,7 +249,7 @@ h1 {
 .section h2 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
-  color: #333;
+  color: var(--color-dark-grey)
 }
 
 .quick-actions {
@@ -280,7 +264,7 @@ h1 {
   padding: 1.5rem;
   text-align: center;
   text-decoration: none;
-  color: #333;
+  color: var(--color-dark-grey);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -318,11 +302,11 @@ h1 {
 
 .session-title {
   font-weight: 600;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 .session-course {
-  color: #666;
+  color: var(--color-grey);
   font-size: 0.875rem;
 }
 
@@ -363,11 +347,11 @@ h1 {
 .course-code {
   font-size: 1.25rem;
   font-weight: bold;
-  color: #4f46e5;
+  color: var(--color-purple);
 }
 
 .course-name {
-  color: #333;
+  color: var(--color-dark-grey);
   margin-top: 0.25rem;
 }
 
@@ -418,7 +402,7 @@ h1 {
 
 .status-completed {
   background: #f5f5f5;
-  color: #666;
+  color: var(--color-grey);
 }
 
 .status-cancelled {
@@ -438,17 +422,12 @@ h1 {
   border: 1px solid #ffcdd2;
 }
 
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
-}
-
+.loading,
 .empty {
   text-align: center;
-  padding: 2rem;
-  color: #888;
-  background: #f9f9f9;
+  padding: 60px 20px;
+  color: #6b7280;
+  background: white;
   border-radius: 8px;
 }
 </style>

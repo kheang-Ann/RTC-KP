@@ -1,4 +1,5 @@
-import { IsOptional, IsInt, IsDateString, IsUUID } from 'class-validator';
+import { IsOptional, IsInt, IsDateString, IsUUID, IsEnum } from 'class-validator';
+import { EnrollmentStatus } from '../entities/enrollment.entity';
 
 export class CreateEnrollmentDto {
   @IsUUID()
@@ -10,4 +11,8 @@ export class CreateEnrollmentDto {
   @IsOptional()
   @IsDateString()
   enrolledAt?: string;
+
+  @IsOptional()
+  @IsEnum(EnrollmentStatus)
+  status?: EnrollmentStatus;
 }

@@ -104,7 +104,7 @@ h1 {
 
 .subtitle {
   text-align: center;
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 2rem;
 }
 
@@ -194,7 +194,7 @@ h1 {
 }
 
 .success-state p {
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 1.5rem;
 }
 
@@ -206,7 +206,7 @@ h1 {
 
 .tips h3 {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 0.5rem;
 }
 

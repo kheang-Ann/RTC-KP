@@ -9,6 +9,7 @@ import { RolePermission } from './entities/role-permission';
 import { RefreshToken } from './entities/refresh-toke.entity';
 import { UserController } from './user.controller';
 import { RoleSeeder } from './seeds/role.seeder';
+import { AdminSeeder } from './seeds/admin.seeder';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { RoleSeeder } from './seeds/role.seeder';
     ]),
   ],
   controllers: [UserController],
-  providers: [UserService, RoleSeeder],
+  providers: [UserService, RoleSeeder, AdminSeeder],
   exports: [UserService],
 })
 export class UserModule {}

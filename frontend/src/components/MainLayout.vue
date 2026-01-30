@@ -26,16 +26,20 @@ interface MenuItem {
 const menuItems: MenuItem[] = [
   // Admin menu items
   { name: 'Dashboard', path: '/admin/dashboard', icon: '🏠', roles: ['admin'] },
-  { name: 'Courses', path: '/admin/courses', icon: '📚', roles: ['admin'] },
   { name: 'Departments', path: '/admin/departments', icon: '🏢', roles: ['admin'] },
-  { name: 'Users', path: '/admin/users', icon: '👤', roles: ['admin'] },
+  { name: 'Programs', path: '/admin/programs', icon: '📖', roles: ['admin'] },
+  { name: 'Courses', path: '/admin/courses', icon: '📚', roles: ['admin'] },
+  { name: 'Students', path: '/admin/students', icon: '🎓', roles: ['admin'] },
+  { name: 'Teachers', path: '/admin/teachers', icon: '👨‍🏫', roles: ['admin'] },
   { name: 'Enrollments', path: '/admin/enrollments', icon: '📋', roles: ['admin'] },
   { name: 'Leave Requests', path: '/admin/leave-requests', icon: '📝', roles: ['admin'] },
+  { name: 'Sessions', path: '/admin/sessions', icon: '📅', roles: ['admin'] },
+  { name: 'Attendance', path: '/admin/attendance', icon: '✅', roles: ['admin'] },
   // Teacher menu items
   { name: 'Dashboard', path: '/teacher/dashboard', icon: '🏠', roles: ['teacher'] },
-  { name: 'Sessions', path: '/teacher/sessions', icon: '📅', roles: ['teacher', 'admin'] },
-  { name: 'Attendance', path: '/teacher/attendance', icon: '✅', roles: ['teacher', 'admin'] },
-  { name: 'Students', path: '/teacher/students', icon: '👥', roles: ['teacher', 'admin'] },
+  { name: 'Sessions', path: '/teacher/sessions', icon: '📅', roles: ['teacher'] },
+  { name: 'Attendance', path: '/teacher/attendance', icon: '✅', roles: ['teacher'] },
+  { name: 'Students', path: '/teacher/students', icon: '🎓', roles: ['teacher'] },
   { name: 'Leave Requests', path: '/teacher/leave-requests', icon: '📝', roles: ['teacher'] },
   // Student menu items
   { name: 'Dashboard', path: '/student/dashboard', icon: '🏠', roles: ['student'] },

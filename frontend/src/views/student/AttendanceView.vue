@@ -91,7 +91,7 @@ function getCourseName(courseId?: string) {
 
     <!-- Stats Cards -->
     <div class="stats-grid">
-      <div class="stat-card stat-primary">
+      <div class="stat-card border-left-lightblue">
         <div class="stat-value">{{ stats.attendanceRate }}%</div>
         <div class="stat-label">Attendance Rate</div>
       </div>
@@ -103,11 +103,11 @@ function getCourseName(courseId?: string) {
         <div class="stat-value">{{ stats.present }}</div>
         <div class="stat-label">Present</div>
       </div>
-      <div class="stat-card stat-warning">
+      <div class="stat-card border-left-orange">
         <div class="stat-value">{{ stats.late }}</div>
         <div class="stat-label">Late</div>
       </div>
-      <div class="stat-card stat-danger">
+      <div class="stat-card border-left-lightred">
         <div class="stat-value">{{ stats.absent }}</div>
         <div class="stat-label">Absent</div>
       </div>
@@ -171,7 +171,7 @@ h1 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 1.5rem;
 }
 
@@ -193,19 +193,16 @@ h1 {
 .stat-value {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 .stat-label {
-  color: #666;
+  color: var(--color-grey);
   font-size: 0.75rem;
   margin-top: 0.25rem;
 }
 
-.stat-primary .stat-value { color: #007bff; }
 .stat-success .stat-value { color: #28a745; }
-.stat-warning .stat-value { color: #ffc107; }
-.stat-danger .stat-value { color: #dc3545; }
 
 .filters {
   background: white;
@@ -281,7 +278,7 @@ h1 {
 
 .empty p {
   margin-bottom: 1rem;
-  color: #666;
+  color: var(--color-grey);
 }
 
 .btn {

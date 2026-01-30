@@ -9,13 +9,18 @@ import {
   UseGuards,
   Req,
   ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { LeaveRequestsService } from './leave-requests.service';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { ReviewLeaveRequestDto } from './dto/review-leave-request.dto';
 import { JwtAuthGuard } from '../auth/guards/jaw-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
+import { RequesterType } from './entities/leave-request.entity';
+import { leaveDocumentUploadConfig } from 'src/config/file-uploading.config';
 
 interface RequestWithUser {
   user: {
@@ -31,13 +36,43 @@ export class LeaveRequestsController {
   constructor(private readonly leaveRequestsService: LeaveRequestsService) {}
 
   // Student creates leave request
-  @Post()
+  @Post('student')
   @Roles('student')
-  async create(
+  @UseInterceptors(FileInterceptor('document', leaveDocumentUploadConfig))
+  async createStudentRequest(
     @Body() dto: CreateLeaveRequestDto,
     @Req() req: RequestWithUser,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.leaveRequestsService.create(dto, req.user.sub);
+    const documentPath = file
+      ? `/uploads/leave-documents/${file.filename}`
+      : undefined;
+    return this.leaveRequestsService.create(
+      dto,
+      req.user.sub,
+      RequesterType.STUDENT,
+      documentPath,
+    );
+  }
+
+  // Teacher creates leave request
+  @Post('teacher')
+  @Roles('teacher')
+  @UseInterceptors(FileInterceptor('document', leaveDocumentUploadConfig))
+  async createTeacherRequest(
+    @Body() dto: CreateLeaveRequestDto,
+    @Req() req: RequestWithUser,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const documentPath = file
+      ? `/uploads/leave-documents/${file.filename}`
+      : undefined;
+    return this.leaveRequestsService.create(
+      dto,
+      req.user.sub,
+      RequesterType.TEACHER,
+      documentPath,
+    );
   }
 
   // Get all leave requests (admin only)
@@ -47,29 +82,18 @@ export class LeaveRequestsController {
     return this.leaveRequestsService.findAll();
   }
 
-  // Get my leave requests (student)
+  // Get my leave requests (student or teacher)
   @Get('my')
-  @Roles('student')
+  @Roles('student', 'teacher')
   async findMyLeaveRequests(@Req() req: RequestWithUser) {
-    return this.leaveRequestsService.findByStudent(req.user.sub);
+    return this.leaveRequestsService.findByUser(req.user.sub);
   }
 
-  // Get leave requests for teacher's courses
-  @Get('teacher')
-  @Roles('teacher', 'admin')
-  async findTeacherLeaveRequests(@Req() req: RequestWithUser) {
-    const isAdmin = req.user.roles?.includes('admin') ?? false;
-    if (isAdmin) {
-      return this.leaveRequestsService.findAll();
-    }
-    return this.leaveRequestsService.findByTeacher(req.user.sub);
-  }
-
-  // Get leave requests by course
-  @Get('course/:courseId')
-  @Roles('teacher', 'admin')
-  async findByCourse(@Param('courseId', ParseUUIDPipe) courseId: string) {
-    return this.leaveRequestsService.findByCourse(courseId);
+  // Get single leave request with details (admin)
+  @Get(':id/details')
+  @Roles('admin')
+  async findOneWithDetails(@Param('id', ParseUUIDPipe) id: string) {
+    return this.leaveRequestsService.findOneWithDetails(id);
   }
 
   // Get single leave request
@@ -79,21 +103,20 @@ export class LeaveRequestsController {
     return this.leaveRequestsService.findOne(id);
   }
 
-  // Teacher/Admin reviews leave request
+  // Admin reviews leave request
   @Patch(':id/review')
-  @Roles('teacher', 'admin')
+  @Roles('admin')
   async review(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ReviewLeaveRequestDto,
     @Req() req: RequestWithUser,
   ) {
-    const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.leaveRequestsService.review(id, dto, req.user.sub, isAdmin);
+    return this.leaveRequestsService.review(id, dto, req.user.sub);
   }
 
   // Delete leave request
   @Delete(':id')
-  @Roles('student', 'admin')
+  @Roles('student', 'teacher', 'admin')
   async remove(
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: RequestWithUser,

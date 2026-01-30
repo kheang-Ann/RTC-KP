@@ -6,9 +6,12 @@ const NestedLayout = () => import('@/views/layouts/NestedLayout.vue')
 const AdminCoursesView = () => import('@/views/admin/CoursesView.vue')
 const AdminDashboardView = () => import('@/views/admin/DashboardView.vue')
 const AdminDepartmentsView = () => import('@/views/admin/DepartmentsView.vue')
-const AdminUsersView = () => import('@/views/admin/UsersView.vue')
+const AdminStudentsView = () => import('@/views/admin/StudentsView.vue')
+const AdminTeachersView = () => import('@/views/admin/TeachersView.vue')
 const AdminAttendanceView = () => import('@/views/admin/AttendanceView.vue')
 const AdminEnrollmentsView = () => import('@/views/admin/EnrollmentsView.vue')
+const AdminProgramsView = () => import('@/views/admin/ProgramsView.vue')
+const AdminSessionsView = () => import('@/views/admin/SessionsView.vue')
 const TeacherDashboardView = () => import('@/views/teacher/DashboardView.vue')
 const TeacherAttendanceView = () => import('@/views/teacher/AttendanceView.vue')
 const TeacherStudentsView = () => import('@/views/teacher/StudentsView.vue')
@@ -59,14 +62,29 @@ const router = createRouter({
           component: AdminDepartmentsView,
         },
         {
-          path: 'users',
-          name: 'admin-users',
-          component: AdminUsersView,
+          path: 'programs',
+          name: 'admin-programs',
+          component: AdminProgramsView,
+        },
+        {
+          path: 'students',
+          name: 'admin-students',
+          component: AdminStudentsView,
+        },
+        {
+          path: 'teachers',
+          name: 'admin-teachers',
+          component: AdminTeachersView,
         },
         {
           path: 'attendance',
           name: 'admin-attendance',
           component: AdminAttendanceView,
+        },
+        {
+          path: 'sessions',
+          name: 'admin-sessions',
+          component: AdminSessionsView,
         },
         {
           path: 'enrollments',
@@ -85,7 +103,7 @@ const router = createRouter({
     {
       path: '/teacher',
       component: NestedLayout,
-      meta: { requiresAuth: true, roles: ['teacher', 'admin'] },
+      meta: { requiresAuth: true, roles: ['teacher'] },
       children: [
         {
           path: 'dashboard',
@@ -165,12 +183,6 @@ const router = createRouter({
           path: 'departments',
           name: 'departments',
           component: AdminDepartmentsView,
-          meta: { roles: ['admin'] },
-        },
-        {
-          path: 'users',
-          name: 'users',
-          component: AdminUsersView,
           meta: { roles: ['admin'] },
         },
         {

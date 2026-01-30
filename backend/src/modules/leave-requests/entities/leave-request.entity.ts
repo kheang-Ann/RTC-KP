@@ -9,8 +9,8 @@ import {
   Index,
 } from 'typeorm';
 import { User } from 'src/modules/users/entities/user.entity';
-import { Course } from 'src/modules/courses/entities/course.entity';
-import { Session } from 'src/modules/sessions/entities/session.entity';
+import { Student } from 'src/modules/students/entities/student.entity';
+import { Teacher } from 'src/modules/teachers/entities/teacher.entity';
 
 export enum LeaveRequestStatus {
   PENDING = 'pending',
@@ -18,40 +18,73 @@ export enum LeaveRequestStatus {
   REJECTED = 'rejected',
 }
 
+export enum LeaveType {
+  SICK = 'sick',
+  ANNUAL = 'annual',
+  EMERGENCY = 'emergency',
+  OTHER = 'other',
+}
+
+export enum RequesterType {
+  STUDENT = 'student',
+  TEACHER = 'teacher',
+}
+
 @Entity('leave_requests')
 export class LeaveRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
+  // Who is requesting leave
+  @Column({ type: 'enum', enum: RequesterType })
+  requesterType: RequesterType;
+
+  // For student requests
+  @Index()
+  @Column({ type: 'int', nullable: true })
+  studentId: number | null;
+
+  @ManyToOne(() => Student, { nullable: true })
+  @JoinColumn({ name: 'studentId' })
+  student: Student;
+
+  // For teacher requests
+  @Index()
+  @Column({ type: 'int', nullable: true })
+  teacherId: number | null;
+
+  @ManyToOne(() => Teacher, { nullable: true })
+  @JoinColumn({ name: 'teacherId' })
+  teacher: Teacher;
+
+  // User who made the request (for getting name/email)
   @Index()
   @Column({ type: 'int' })
-  studentId: number;
+  userId: number;
 
   @ManyToOne(() => User, { nullable: false })
-  @JoinColumn({ name: 'studentId' })
-  student: User;
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
-  @Index()
-  @Column({ type: 'uuid' })
-  courseId: string;
-
-  @ManyToOne(() => Course, { nullable: false })
-  @JoinColumn({ name: 'courseId' })
-  course: Course;
-
-  @Index()
-  @Column({ type: 'uuid', nullable: true })
-  sessionId: string | null;
-
-  @ManyToOne(() => Session, { nullable: true })
-  @JoinColumn({ name: 'sessionId' })
-  session: Session;
+  // Leave type
+  @Column({ type: 'enum', enum: LeaveType })
+  leaveType: LeaveType;
 
   @Column({ type: 'date' })
-  leaveDate: Date;
+  startDate: Date;
+
+  @Column({ type: 'date' })
+  endDate: Date;
+
+  @Column({ type: 'int' })
+  totalDays: number;
 
   @Column({ type: 'text' })
   reason: string;
+
+  // Optional document upload
+  @Column({ type: 'varchar', nullable: true })
+  documentPath: string | null;
 
   @Column({
     type: 'enum',

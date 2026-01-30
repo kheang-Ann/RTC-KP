@@ -8,7 +8,7 @@ export interface Course {
   departmentId: number | null
   teacherId: number | null
   department?: { id: number; name: string }
-  teacher?: { id: number; firstName: string; lastName: string; email: string }
+  teacher?: { id: number; nameKhmer: string | null; nameLatin: string | null; email: string }
   createdAt: string
 }
 

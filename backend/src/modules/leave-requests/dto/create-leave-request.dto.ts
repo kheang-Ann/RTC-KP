@@ -1,16 +1,20 @@
-import { IsUUID, IsString, IsDateString, IsOptional } from 'class-validator';
+import { IsString, IsDateString, IsEnum, IsOptional } from 'class-validator';
+import { LeaveType } from '../entities/leave-request.entity';
 
 export class CreateLeaveRequestDto {
-  @IsUUID()
-  courseId: string;
-
-  @IsOptional()
-  @IsUUID()
-  sessionId?: string;
+  @IsEnum(LeaveType)
+  leaveType: LeaveType;
 
   @IsDateString()
-  leaveDate: string;
+  startDate: string;
+
+  @IsDateString()
+  endDate: string;
 
   @IsString()
   reason: string;
+
+  @IsOptional()
+  @IsString()
+  documentPath?: string;
 }
