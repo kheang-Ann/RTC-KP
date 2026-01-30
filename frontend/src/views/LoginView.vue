@@ -101,7 +101,7 @@ async function handleLogin() {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--color-grey);
   text-align: center;
   margin-bottom: 24px;
 }
@@ -128,7 +128,7 @@ async function handleLogin() {
 
 .form-group input:focus {
   outline: none;
-  border-color: #4f46e5;
+  border-color: var(--color-purple);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
@@ -142,7 +142,7 @@ async function handleLogin() {
 }
 
 .btn-primary {
-  background: #4f46e5;
+  background: var(--color-purple);
   color: white;
 }
 

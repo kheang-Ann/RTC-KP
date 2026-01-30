@@ -1,17 +1,23 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { usersService, type User } from '@/services/users'
 import { enrollmentsService, type Enrollment } from '@/services/enrollments'
 import { coursesService, type Course } from '@/services/courses'
 import { attendanceService, type Attendance } from '@/services/attendance'
+import { departmentsService, type Department } from '@/services/departments'
+import { programsService, type Program } from '@/services/programs'
 
 const students = ref<User[]>([])
 const courses = ref<Course[]>([])
 const enrollments = ref<Enrollment[]>([])
+const departments = ref<Department[]>([])
+const programs = ref<Program[]>([])
 const loading = ref(false)
 const error = ref('')
 
 // Filters
+const selectedDepartment = ref<number | null>(null)
+const selectedProgram = ref<number | null>(null)
 const selectedCourse = ref<string>('')
 const searchQuery = ref('')
 
@@ -27,13 +33,33 @@ const filteredStudents = computed(() => {
     const query = searchQuery.value.toLowerCase()
     result = result.filter(
       (s) =>
-        s.firstName.toLowerCase().includes(query) ||
-        s.lastName.toLowerCase().includes(query) ||
+        (s.nameLatin?.toLowerCase() || '').includes(query) ||
+        (s.nameKhmer?.toLowerCase() || '').includes(query) ||
         s.email.toLowerCase().includes(query),
     )
   }
 
   return result
+})
+
+const filteredPrograms = computed(() => {
+  if (!selectedDepartment.value) return programs.value
+  return programs.value.filter((p) => p.departmentId === selectedDepartment.value)
+})
+
+const filteredCourses = computed(() => {
+  if (!selectedDepartment.value) return courses.value
+  return courses.value.filter((c) => c.departmentId === selectedDepartment.value)
+})
+
+// Reset selections when parent filter changes
+watch(selectedDepartment, () => {
+  selectedProgram.value = null
+  selectedCourse.value = ''
+})
+
+watch(selectedProgram, () => {
+  selectedCourse.value = ''
 })
 
 const studentsInCourse = computed(() => {
@@ -67,14 +93,18 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [studentsData, coursesData, enrollmentsData] = await Promise.all([
+    const [studentsData, coursesData, enrollmentsData, departmentsData, programsData] = await Promise.all([
       usersService.getStudents(),
       coursesService.getMyCourses(),
       enrollmentsService.getAll(),
+      departmentsService.getAll(),
+      programsService.getAll(),
     ])
     students.value = studentsData
     courses.value = coursesData
     enrollments.value = enrollmentsData
+    departments.value = departmentsData
+    programs.value = programsData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -134,10 +164,28 @@ function formatDate(dateStr: string) {
         <input v-model="searchQuery" type="text" placeholder="Search by name or email..." />
       </div>
       <div class="filter-group">
+        <label>Filter by Department</label>
+        <select v-model="selectedDepartment">
+          <option :value="null">All Departments</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+            {{ dept.name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Filter by Program</label>
+        <select v-model="selectedProgram" :disabled="!selectedDepartment">
+          <option :value="null">All Programs</option>
+          <option v-for="program in filteredPrograms" :key="program.id" :value="program.id">
+            {{ program.name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
         <label>Filter by Course</label>
-        <select v-model="selectedCourse">
+        <select v-model="selectedCourse" :disabled="!selectedDepartment">
           <option value="">All Students</option>
-          <option v-for="course in courses" :key="course.id" :value="course.id">
+          <option v-for="course in filteredCourses" :key="course.id" :value="course.id">
             {{ course.code }} - {{ course.name }}
           </option>
         </select>
@@ -161,7 +209,7 @@ function formatDate(dateStr: string) {
       <tbody>
         <tr v-for="student in studentsInCourse" :key="student.id">
           <td>{{ student.id }}</td>
-          <td>{{ student.firstName }} {{ student.lastName }}</td>
+          <td>{{ student.nameLatin || student.nameKhmer || '-' }}</td>
           <td>{{ student.email }}</td>
           <td>{{ student.department?.name || '-' }}</td>
           <td>
@@ -194,7 +242,7 @@ function formatDate(dateStr: string) {
       <div class="modal modal-lg">
         <h2>Attendance History</h2>
         <p class="modal-subtitle">
-          {{ selectedStudent?.firstName }} {{ selectedStudent?.lastName }}
+          {{ selectedStudent?.nameLatin || selectedStudent?.nameKhmer || '-' }}
         </p>
 
         <div v-if="studentAttendance.length" class="attendance-content">
@@ -312,7 +360,7 @@ function formatDate(dateStr: string) {
 }
 
 .remove-btn:hover {
-  color: #ef4444;
+  color: var(--color-light-red);
 }
 
 .no-courses {
@@ -357,9 +405,9 @@ function formatDate(dateStr: string) {
 }
 
 .btn-primary {
-  background: #4f46e5;
+  background: var(--color-purple);
   color: white;
-  border-color: #4f46e5;
+  border-color: var(--color-purple);
 }
 
 .btn-secondary {
@@ -400,7 +448,7 @@ function formatDate(dateStr: string) {
 }
 
 .modal-subtitle {
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 16px;
 }
 
@@ -453,6 +501,6 @@ function formatDate(dateStr: string) {
 .empty {
   text-align: center;
   padding: 40px;
-  color: #666;
+  color: var(--color-grey);
 }
 </style>

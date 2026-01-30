@@ -19,14 +19,14 @@ export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ nullable: true })
-  firstName: string;
-
-  @Column({ nullable: true })
-  lastName: string;
-
   @Column({ unique: true })
   email: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  nameKhmer: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  nameLatin: string | null;
 
   @Column({ select: false })
   @Exclude()

@@ -84,7 +84,7 @@ function formatDate(dateStr?: string) {
 
 <template>
   <div class="admin-dashboard">
-    <h1>Welcome, {{ user?.firstName }} {{ user?.lastName }}</h1>
+    <h1>Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
     <p class="subtitle">Admin Dashboard</p>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -94,27 +94,27 @@ function formatDate(dateStr?: string) {
     <template v-else>
       <!-- Stats Cards -->
       <div class="stats-grid">
-        <div class="stat-card stat-primary">
+        <div class="stat-card border-left-blue">
           <div class="stat-value">{{ stats.totalUsers }}</div>
           <div class="stat-label">Total Users</div>
         </div>
-        <div class="stat-card stat-info">
+        <div class="stat-card border-left-lightblue">
           <div class="stat-value">{{ stats.totalStudents }}</div>
           <div class="stat-label">Students</div>
         </div>
-        <div class="stat-card stat-success">
+        <div class="stat-card border-left-green">
           <div class="stat-value">{{ stats.totalTeachers }}</div>
           <div class="stat-label">Teachers</div>
         </div>
-        <div class="stat-card stat-warning">
+        <div class="stat-card border-left-orange">
           <div class="stat-value">{{ stats.totalCourses }}</div>
           <div class="stat-label">Courses</div>
         </div>
-        <div class="stat-card">
+        <div class="stat-card border-left-lightred">
           <div class="stat-value">{{ stats.totalDepartments }}</div>
           <div class="stat-label">Departments</div>
         </div>
-        <div class="stat-card stat-purple">
+        <div class="stat-card border-left-lightpurple">
           <div class="stat-value">{{ stats.totalEnrollments }}</div>
           <div class="stat-label">Enrollments</div>
         </div>
@@ -165,7 +165,7 @@ function formatDate(dateStr?: string) {
             </thead>
             <tbody>
               <tr v-for="u in recentUsers" :key="u.id">
-                <td>{{ u.firstName }} {{ u.lastName }}</td>
+                <td>{{ u.nameLatin || u.nameKhmer || '-' }}</td>
                 <td>{{ u.email }}</td>
                 <td>{{ formatDate(u.createdAt) }}</td>
               </tr>
@@ -186,7 +186,7 @@ function formatDate(dateStr?: string) {
             </thead>
             <tbody>
               <tr v-for="enrollment in recentEnrollments" :key="enrollment.id">
-                <td>{{ enrollment.student?.firstName }} {{ enrollment.student?.lastName }}</td>
+                <td>{{ enrollment.student?.nameLatin || enrollment.student?.nameKhmer || '-' }}</td>
                 <td>{{ enrollment.course?.code || enrollment.course?.name }}</td>
                 <td>{{ formatDate(enrollment.enrolledAt) }}</td>
               </tr>
@@ -205,7 +205,7 @@ function formatDate(dateStr?: string) {
             <div class="course-name">{{ course.name }}</div>
             <div class="course-meta">
               <span>{{ course.credits }} credits</span>
-              <span v-if="course.teacher">• {{ course.teacher.firstName }} {{ course.teacher.lastName }}</span>
+              <span v-if="course.teacher">• {{ course.teacher.nameLatin || course.teacher.nameKhmer || '-' }}</span>
             </div>
           </div>
         </div>
@@ -225,7 +225,7 @@ h1 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 1.5rem;
 }
 
@@ -247,33 +247,13 @@ h1 {
 .stat-value {
   font-size: 2rem;
   font-weight: bold;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 .stat-label {
-  color: #666;
+  color: var(--color-grey);
   font-size: 0.875rem;
   margin-top: 0.25rem;
-}
-
-.stat-primary {
-  border-left: 4px solid #4f46e5;
-}
-
-.stat-success {
-  border-left: 4px solid #22c55e;
-}
-
-.stat-warning {
-  border-left: 4px solid #f59e0b;
-}
-
-.stat-info {
-  border-left: 4px solid #3b82f6;
-}
-
-.stat-purple {
-  border-left: 4px solid #8b5cf6;
 }
 
 .section {
@@ -283,7 +263,7 @@ h1 {
 .section h2 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 .two-columns {
@@ -304,7 +284,7 @@ h1 {
   padding: 1.25rem;
   text-align: center;
   text-decoration: none;
-  color: #333;
+  color: var(--color-dark-grey);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -341,11 +321,11 @@ h1 {
 .course-code {
   font-size: 1.125rem;
   font-weight: bold;
-  color: #4f46e5;
+  color: var(--color-purple);
 }
 
 .course-name {
-  color: #333;
+  color: var(--color-dark-grey);
   margin-top: 0.25rem;
 }
 
@@ -393,17 +373,12 @@ h1 {
   border: 1px solid #ffcdd2;
 }
 
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
-}
-
+.loading,
 .empty {
   text-align: center;
-  padding: 2rem;
-  color: #888;
-  background: #f9f9f9;
+  padding: 60px 20px;
+  color: #6b7280;
+  background: white;
   border-radius: 8px;
 }
 </style>

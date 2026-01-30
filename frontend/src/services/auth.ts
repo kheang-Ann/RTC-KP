@@ -18,8 +18,8 @@ export interface AuthResponse {
   user: {
     id: number
     email: string
-    firstName?: string
-    lastName?: string
+    nameKhmer?: string
+    nameLatin?: string
     roles: string[]
   }
 }
@@ -27,6 +27,8 @@ export interface AuthResponse {
 export interface CurrentUser {
   id: number
   email: string
+  nameKhmer?: string
+  nameLatin?: string
   firstName?: string
   lastName?: string
   roles: string[]

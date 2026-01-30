@@ -1,28 +1,50 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { leaveRequestsService, type LeaveRequest, type ReviewLeaveRequestDto } from '@/services/leave-requests'
-import { coursesService, type Course } from '@/services/courses'
+import {
+  leaveRequestsService,
+  type LeaveRequest,
+  type ReviewLeaveRequestDto,
+  type LeaveType,
+  type LeaveRequestWithDetails,
+} from '@/services/leave-requests'
 
 const leaveRequests = ref<LeaveRequest[]>([])
-const courses = ref<Course[]>([])
-const selectedCourse = ref<string>('')
+const selectedRequesterType = ref<string>('')
 const selectedStatus = ref<string>('')
 const loading = ref(false)
 const error = ref('')
 const successMessage = ref('')
+
+// Review modal
 const showReviewModal = ref(false)
 const reviewingRequest = ref<LeaveRequest | null>(null)
-
 const reviewForm = ref<ReviewLeaveRequestDto>({
   status: 'approved',
   reviewNote: '',
 })
 
+// View details modal
+const showViewModal = ref(false)
+const viewingDetails = ref<LeaveRequestWithDetails | null>(null)
+const loadingDetails = ref(false)
+
+// Reject modal
+const showRejectModal = ref(false)
+const rejectingRequest = ref<LeaveRequest | null>(null)
+const rejectReason = ref('')
+
+const leaveTypeLabels: Record<LeaveType, string> = {
+  sick: 'Sick Leave',
+  annual: 'Annual Leave',
+  emergency: 'Emergency Leave',
+  other: 'Other',
+}
+
 const filteredRequests = computed(() => {
   let result = leaveRequests.value
 
-  if (selectedCourse.value) {
-    result = result.filter((r) => r.courseId === selectedCourse.value)
+  if (selectedRequesterType.value) {
+    result = result.filter((r) => r.requesterType === selectedRequesterType.value)
   }
 
   if (selectedStatus.value) {
@@ -47,12 +69,7 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [requestsData, coursesData] = await Promise.all([
-      leaveRequestsService.getAll(),
-      coursesService.getAll(),
-    ])
-    leaveRequests.value = requestsData
-    courses.value = coursesData
+    leaveRequests.value = await leaveRequestsService.getAll()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -60,13 +77,33 @@ async function loadData() {
   }
 }
 
-function openReviewModal(request: LeaveRequest) {
-  reviewingRequest.value = request
-  reviewForm.value = {
-    status: 'approved',
-    reviewNote: '',
+function getRequesterName(request: LeaveRequest) {
+  if (request.requesterType === 'student' && request.student) {
+    return request.student.nameLatin || request.student.nameKhmer
   }
-  showReviewModal.value = true
+  if (request.requesterType === 'teacher' && request.teacher) {
+    return request.teacher.nameLatin || request.teacher.nameKhmer
+  }
+  return request.user?.nameLatin || request.user?.email || 'Unknown'
+}
+
+async function openViewModal(request: LeaveRequest) {
+  loadingDetails.value = true
+  showViewModal.value = true
+  try {
+    viewingDetails.value = await leaveRequestsService.getOneWithDetails(request.id)
+  } catch (e) {
+    error.value = (e as Error).message
+    showViewModal.value = false
+  } finally {
+    loadingDetails.value = false
+  }
+}
+
+function openRejectModal(request: LeaveRequest) {
+  rejectingRequest.value = request
+  rejectReason.value = ''
+  showRejectModal.value = true
 }
 
 async function submitReview() {
@@ -104,15 +141,23 @@ async function quickApprove(request: LeaveRequest) {
   }
 }
 
-async function quickReject(request: LeaveRequest) {
-  const note = prompt('Rejection reason (optional):')
-  if (note === null) return
+async function submitRejection() {
+  if (!rejectingRequest.value) return
+
+  if (!rejectReason.value.trim()) {
+    error.value = 'Please provide a reason for rejection'
+    return
+  }
 
   loading.value = true
   error.value = ''
   try {
-    await leaveRequestsService.review(request.id, { status: 'rejected', reviewNote: note || undefined })
+    await leaveRequestsService.review(rejectingRequest.value.id, {
+      status: 'rejected',
+      reviewNote: rejectReason.value,
+    })
     successMessage.value = 'Leave request rejected!'
+    showRejectModal.value = false
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
   } catch (e) {
@@ -146,6 +191,10 @@ function getStatusClass(status: string) {
     rejected: 'status-rejected',
   }
   return classes[status] || ''
+}
+
+function getLeaveTypeLabel(type: LeaveType) {
+  return leaveTypeLabels[type] || type
 }
 
 function formatDate(dateStr: string) {
@@ -182,7 +231,7 @@ function formatDateTime(dateStr: string) {
         <div class="stat-value">{{ stats.total }}</div>
         <div class="stat-label">Total</div>
       </div>
-      <div class="stat-card stat-warning">
+      <div class="stat-card border-left-orange">
         <div class="stat-value">{{ stats.pending }}</div>
         <div class="stat-label">Pending</div>
       </div>
@@ -190,7 +239,7 @@ function formatDateTime(dateStr: string) {
         <div class="stat-value">{{ stats.approved }}</div>
         <div class="stat-label">Approved</div>
       </div>
-      <div class="stat-card stat-danger">
+      <div class="stat-card border-left-lightred">
         <div class="stat-value">{{ stats.rejected }}</div>
         <div class="stat-label">Rejected</div>
       </div>
@@ -199,12 +248,11 @@ function formatDateTime(dateStr: string) {
     <!-- Filters -->
     <div class="filters">
       <div class="filter-group">
-        <label>Course</label>
-        <select v-model="selectedCourse">
-          <option value="">All Courses</option>
-          <option v-for="course in courses" :key="course.id" :value="course.id">
-            {{ course.code || course.name }} - {{ course.name }}
-          </option>
+        <label>Type</label>
+        <select v-model="selectedRequesterType">
+          <option value="">All Types</option>
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
         </select>
       </div>
       <div class="filter-group">
@@ -224,11 +272,11 @@ function formatDateTime(dateStr: string) {
       <table v-if="filteredRequests.length" class="table">
         <thead>
           <tr>
-            <th>Student</th>
-            <th>Course</th>
-            <th>Teacher</th>
-            <th>Leave Date</th>
-            <th>Reason</th>
+            <th>Requester</th>
+            <th>Type</th>
+            <th>Leave Type</th>
+            <th>Period</th>
+            <th>Days</th>
             <th>Status</th>
             <th>Submitted</th>
             <th>Actions</th>
@@ -237,36 +285,35 @@ function formatDateTime(dateStr: string) {
         <tbody>
           <tr v-for="request in filteredRequests" :key="request.id">
             <td>
-              <div class="student-name">{{ request.student?.firstName }} {{ request.student?.lastName }}</div>
-              <div class="student-email">{{ request.student?.email }}</div>
+              <div class="requester-name">{{ getRequesterName(request) }}</div>
+              <div class="requester-type">{{ request.requesterType }}</div>
             </td>
-            <td>{{ request.course?.code || request.course?.name }}</td>
             <td>
-              <span v-if="request.course">
-                {{ courses.find(c => c.id === request.courseId)?.teacher?.firstName }}
-                {{ courses.find(c => c.id === request.courseId)?.teacher?.lastName }}
+              <span class="type-badge" :class="request.requesterType">
+                {{ request.requesterType }}
               </span>
             </td>
-            <td>{{ formatDate(request.leaveDate) }}</td>
-            <td class="reason-cell">
-              <div class="reason-text">{{ request.reason }}</div>
+            <td>{{ getLeaveTypeLabel(request.leaveType) }}</td>
+            <td>
+              <div class="period">
+                {{ formatDate(request.startDate) }}
+                <span v-if="request.startDate !== request.endDate">
+                  - {{ formatDate(request.endDate) }}
+                </span>
+              </div>
             </td>
+            <td>{{ request.totalDays }}</td>
             <td>
               <span class="status-badge" :class="getStatusClass(request.status)">{{ request.status }}</span>
             </td>
             <td>{{ formatDateTime(request.createdAt) }}</td>
             <td class="actions">
+              <button class="btn btn-sm btn-outline" @click="openViewModal(request)">View</button>
               <template v-if="request.status === 'pending'">
-                <button class="btn btn-sm btn-primary" @click="openReviewModal(request)">Review</button>
                 <button class="btn btn-sm btn-success" @click="quickApprove(request)">Approve</button>
-                <button class="btn btn-sm btn-danger" @click="quickReject(request)">Reject</button>
+                <button class="btn btn-sm btn-danger" @click="openRejectModal(request)">Reject</button>
               </template>
-              <template v-else>
-                <span class="reviewed-by" v-if="request.reviewedBy">
-                  by {{ request.reviewedBy.firstName }}
-                </span>
-              </template>
-              <button class="btn btn-sm btn-outline" @click="deleteRequest(request.id)">Delete</button>
+              <button class="btn btn-sm btn-outline-danger" @click="deleteRequest(request.id)">🗑</button>
             </td>
           </tr>
         </tbody>
@@ -275,15 +322,158 @@ function formatDateTime(dateStr: string) {
       <div v-else class="empty">No leave requests found.</div>
     </template>
 
-    <!-- Review Modal -->
+    <!-- View Details Modal -->
+    <div v-if="showViewModal" class="modal-overlay" @click.self="showViewModal = false">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h2>Leave Request Details</h2>
+          <button class="close-btn" @click="showViewModal = false">&times;</button>
+        </div>
+
+        <div v-if="loadingDetails" class="loading">Loading details...</div>
+
+        <template v-else-if="viewingDetails">
+          <!-- Contact Details -->
+          <div class="detail-section">
+            <h3>{{ viewingDetails.contactDetails.type }} Information</h3>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>Name (Latin)</label>
+                <span>{{ viewingDetails.contactDetails.name }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Name (Khmer)</label>
+                <span>{{ viewingDetails.contactDetails.nameKhmer }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Email</label>
+                <span>{{ viewingDetails.contactDetails.email }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Phone Numbers</label>
+                <span>{{ viewingDetails.contactDetails.phoneNumbers?.join(', ') || 'N/A' }}</span>
+              </div>
+              <div v-if="viewingDetails.contactDetails.emergencyPhoneNumbers?.length" class="detail-item">
+                <label>Emergency Contacts</label>
+                <span>{{ viewingDetails.contactDetails.emergencyPhoneNumbers.join(', ') }}</span>
+              </div>
+              <div v-if="viewingDetails.contactDetails.department" class="detail-item">
+                <label>Department</label>
+                <span>{{ viewingDetails.contactDetails.department }}</span>
+              </div>
+              <div v-if="viewingDetails.contactDetails.program" class="detail-item">
+                <label>Program</label>
+                <span>{{ viewingDetails.contactDetails.program }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Leave Information -->
+          <div class="detail-section">
+            <h3>Leave Information</h3>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>Leave Type</label>
+                <span>{{ getLeaveTypeLabel(viewingDetails.leaveRequest.leaveType) }}</span>
+              </div>
+              <div class="detail-item">
+                <label>Period</label>
+                <span>
+                  {{ formatDate(viewingDetails.leaveRequest.startDate) }}
+                  <span v-if="viewingDetails.leaveRequest.startDate !== viewingDetails.leaveRequest.endDate">
+                    - {{ formatDate(viewingDetails.leaveRequest.endDate) }}
+                  </span>
+                </span>
+              </div>
+              <div class="detail-item">
+                <label>Total Days</label>
+                <span>{{ viewingDetails.leaveRequest.totalDays }} day(s)</span>
+              </div>
+              <div class="detail-item full-width">
+                <label>Reason</label>
+                <span>{{ viewingDetails.leaveRequest.reason }}</span>
+              </div>
+              <div v-if="viewingDetails.leaveRequest.documentPath" class="detail-item">
+                <label>Document</label>
+                <a :href="viewingDetails.leaveRequest.documentPath" target="_blank" class="document-link">
+                  📎 View Attached Document
+                </a>
+              </div>
+              <div class="detail-item">
+                <label>Status</label>
+                <span class="status-badge" :class="getStatusClass(viewingDetails.leaveRequest.status)">
+                  {{ viewingDetails.leaveRequest.status }}
+                </span>
+              </div>
+              <div v-if="viewingDetails.leaveRequest.reviewNote" class="detail-item full-width">
+                <label>{{ viewingDetails.leaveRequest.status === 'rejected' ? 'Rejection Reason' : 'Review Note' }}</label>
+                <span>{{ viewingDetails.leaveRequest.reviewNote }}</span>
+              </div>
+              <div v-if="viewingDetails.leaveRequest.reviewedBy" class="detail-item">
+                <label>Reviewed By</label>
+                <span>{{ viewingDetails.leaveRequest.reviewedBy.nameLatin }}</span>
+              </div>
+              <div v-if="viewingDetails.leaveRequest.reviewedAt" class="detail-item">
+                <label>Reviewed At</label>
+                <span>{{ formatDateTime(viewingDetails.leaveRequest.reviewedAt) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div v-if="viewingDetails.leaveRequest.status === 'pending'" class="modal-actions">
+            <button class="btn btn-success" @click="quickApprove(viewingDetails.leaveRequest); showViewModal = false">
+              Approve
+            </button>
+            <button class="btn btn-danger" @click="openRejectModal(viewingDetails.leaveRequest); showViewModal = false">
+              Reject
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Reject Modal -->
+    <div v-if="showRejectModal && rejectingRequest" class="modal-overlay" @click.self="showRejectModal = false">
+      <div class="modal">
+        <h2>Reject Leave Request</h2>
+        
+        <div class="reject-info">
+          <p><strong>Requester:</strong> {{ getRequesterName(rejectingRequest) }}</p>
+          <p><strong>Period:</strong> {{ formatDate(rejectingRequest.startDate) }} - {{ formatDate(rejectingRequest.endDate) }}</p>
+          <p><strong>Days:</strong> {{ rejectingRequest.totalDays }}</p>
+        </div>
+
+        <form @submit.prevent="submitRejection">
+          <div class="form-group">
+            <label>Rejection Reason *</label>
+            <textarea
+              v-model="rejectReason"
+              required
+              placeholder="Please provide a reason for rejecting this leave request..."
+              rows="4"
+            ></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn" @click="showRejectModal = false">Cancel</button>
+            <button type="submit" class="btn btn-danger" :disabled="loading || !rejectReason.trim()">
+              Reject Request
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Review Modal (for both approve/reject) -->
     <div v-if="showReviewModal && reviewingRequest" class="modal-overlay" @click.self="showReviewModal = false">
       <div class="modal">
         <h2>Review Leave Request</h2>
         
         <div class="review-details">
-          <p><strong>Student:</strong> {{ reviewingRequest.student?.firstName }} {{ reviewingRequest.student?.lastName }}</p>
-          <p><strong>Course:</strong> {{ reviewingRequest.course?.code || reviewingRequest.course?.name }}</p>
-          <p><strong>Leave Date:</strong> {{ formatDate(reviewingRequest.leaveDate) }}</p>
+          <p><strong>Requester:</strong> {{ getRequesterName(reviewingRequest) }}</p>
+          <p><strong>Leave Type:</strong> {{ getLeaveTypeLabel(reviewingRequest.leaveType) }}</p>
+          <p><strong>Period:</strong> {{ formatDate(reviewingRequest.startDate) }} - {{ formatDate(reviewingRequest.endDate) }}</p>
+          <p><strong>Total Days:</strong> {{ reviewingRequest.totalDays }}</p>
           <p><strong>Reason:</strong> {{ reviewingRequest.reason }}</p>
         </div>
 
@@ -310,12 +500,22 @@ function formatDateTime(dateStr: string) {
             </div>
           </div>
           <div class="form-group">
-            <label>Note (optional)</label>
-            <textarea v-model="reviewForm.reviewNote" placeholder="Add a note for the student..." rows="3"></textarea>
+            <label>{{ reviewForm.status === 'rejected' ? 'Rejection Reason *' : 'Note (optional)' }}</label>
+            <textarea
+              v-model="reviewForm.reviewNote"
+              :required="reviewForm.status === 'rejected'"
+              placeholder="Add a note..."
+              rows="3"
+            ></textarea>
           </div>
           <div class="modal-actions">
             <button type="button" class="btn" @click="showReviewModal = false">Cancel</button>
-            <button type="submit" class="btn" :class="reviewForm.status === 'approved' ? 'btn-success' : 'btn-danger'" :disabled="loading">
+            <button
+              type="submit"
+              class="btn"
+              :class="reviewForm.status === 'approved' ? 'btn-success' : 'btn-danger'"
+              :disabled="loading || (reviewForm.status === 'rejected' && !reviewForm.reviewNote?.trim())"
+            >
               {{ reviewForm.status === 'approved' ? 'Approve' : 'Reject' }}
             </button>
           </div>
@@ -359,20 +559,12 @@ function formatDateTime(dateStr: string) {
 }
 
 .stat-label {
-  color: #666;
+  color: var(--color-grey);
   font-size: 0.875rem;
-}
-
-.stat-warning {
-  border-left: 4px solid #f59e0b;
 }
 
 .stat-success {
   border-left: 4px solid #22c55e;
-}
-
-.stat-danger {
-  border-left: 4px solid #ef4444;
 }
 
 .filters {
@@ -389,14 +581,14 @@ function formatDateTime(dateStr: string) {
 
 .filter-group label {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-grey);
 }
 
 .filter-group select {
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
-  min-width: 180px;
+  min-width: 150px;
 }
 
 .table {
@@ -405,12 +597,12 @@ function formatDateTime(dateStr: string) {
   background: white;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .table th,
 .table td {
-  padding: 0.75rem;
+  padding: 12px 16px;
   text-align: left;
   border-bottom: 1px solid #eee;
 }
@@ -425,23 +617,39 @@ function formatDateTime(dateStr: string) {
   font-size: 0.875rem;
 }
 
-.student-name {
+.table tr:hover {
+  background: #fafafa;
+}
+
+.requester-name {
   font-weight: 500;
 }
 
-.student-email {
+.requester-type {
   color: #888;
   font-size: 0.75rem;
+  text-transform: capitalize;
 }
 
-.reason-cell {
-  max-width: 200px;
+.type-badge {
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
 }
 
-.reason-text {
+.type-badge.student {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.type-badge.teacher {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.period {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .status-badge {
@@ -469,13 +677,8 @@ function formatDateTime(dateStr: string) {
 
 .actions {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.reviewed-by {
-  color: #888;
-  font-size: 0.75rem;
+  gap: 0.25rem;
+  flex-wrap: wrap;
 }
 
 .btn {
@@ -485,6 +688,7 @@ function formatDateTime(dateStr: string) {
   cursor: pointer;
   font-size: 0.75rem;
   transition: background-color 0.2s;
+  background: #e5e7eb;
 }
 
 .btn-sm {
@@ -496,24 +700,42 @@ function formatDateTime(dateStr: string) {
   color: white;
 }
 
+.btn-success:hover {
+  background: #16a34a;
+}
+
 .btn-primary {
   background: #6366f1;
   color: white;
 }
 
 .btn-danger {
-  background: #ef4444;
+  background: var(--color-light-red);
   color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
 }
 
 .btn-outline {
   background: white;
   border: 1px solid #ddd;
-  color: #666;
+  color: var(--color-dark-grey);
 }
 
 .btn-outline:hover {
   background: #f5f5f5;
+}
+
+.btn-outline-danger {
+  background: white;
+  border: 1px solid #fca5a5;
+  color: #dc2626;
+}
+
+.btn-outline-danger:hover {
+  background: #fee2e2;
 }
 
 .alert {
@@ -532,17 +754,12 @@ function formatDateTime(dateStr: string) {
   color: #166534;
 }
 
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
-}
-
+.loading,
 .empty {
   text-align: center;
-  padding: 2rem;
-  color: #888;
-  background: #f9f9f9;
+  padding: 60px 20px;
+  color: #6b7280;
+  background: white;
   border-radius: 8px;
 }
 
@@ -565,20 +782,95 @@ function formatDateTime(dateStr: string) {
   border-radius: 8px;
   min-width: 450px;
   max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
-.modal h2 {
-  margin: 0 0 1rem 0;
+.modal-lg {
+  min-width: 600px;
+  max-width: 800px;
 }
 
-.review-details {
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.modal-header h2 {
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--color-grey);
+}
+
+.close-btn:hover {
+  color: var(--color-dark-grey);
+}
+
+.detail-section {
+  margin-bottom: 1.5rem;
+}
+
+.detail-section h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: var(--color-dark-grey);
+  border-bottom: 1px solid #eee;
+  padding-bottom: 0.5rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-item label {
+  font-size: 0.75rem;
+  color: var(--color-grey);
+  font-weight: 500;
+}
+
+.detail-item span {
+  font-size: 0.875rem;
+}
+
+.document-link {
+  color: var(--color-purple);
+  text-decoration: none;
+}
+
+.document-link:hover {
+  text-decoration: underline;
+}
+
+.review-details,
+.reject-info {
   background: #f9f9f9;
   padding: 1rem;
   border-radius: 4px;
   margin-bottom: 1.5rem;
 }
 
-.review-details p {
+.review-details p,
+.reject-info p {
   margin: 0.25rem 0;
   font-size: 0.875rem;
 }
@@ -591,6 +883,15 @@ function formatDateTime(dateStr: string) {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  resize: vertical;
 }
 
 .decision-buttons {
@@ -609,6 +910,10 @@ function formatDateTime(dateStr: string) {
   transition: all 0.2s;
 }
 
+.decision-btn:hover {
+  background: #f5f5f5;
+}
+
 .decision-btn.active.approved {
   border-color: #22c55e;
   background: #dcfce7;
@@ -616,18 +921,9 @@ function formatDateTime(dateStr: string) {
 }
 
 .decision-btn.active.rejected {
-  border-color: #ef4444;
+  border-color: var(--color-light-red);
   background: #fee2e2;
   color: #991b1b;
-}
-
-.form-group textarea {
-  width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.875rem;
-  resize: vertical;
 }
 
 .modal-actions {

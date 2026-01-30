@@ -10,6 +10,13 @@ import {
 import { User } from 'src/modules/users/entities/user.entity';
 import { Course } from '../../courses/entities/course.entity';
 
+export enum EnrollmentStatus {
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  DROPPED = 'dropped',
+}
+
 @Entity('enrollments')
 @Index(['studentId', 'courseId'], { unique: true })
 export class Enrollment {
@@ -37,6 +44,13 @@ export class Enrollment {
 
   @Column({ type: 'timestamp', nullable: true })
   enrolledAt: Date;
+
+  @Column({
+    type: 'enum',
+    enum: EnrollmentStatus,
+    default: EnrollmentStatus.ACTIVE,
+  })
+  status: EnrollmentStatus;
 
   @CreateDateColumn()
   createdAt: Date;

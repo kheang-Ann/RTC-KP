@@ -89,7 +89,7 @@ h1 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 1.5rem;
 }
 
@@ -115,7 +115,7 @@ h1 {
 
 .course-code {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--color-grey);
   text-transform: uppercase;
   background: #f0f0f0;
   padding: 0.125rem 0.5rem;
@@ -130,7 +130,7 @@ h1 {
 
 .course-meta {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 1rem;
 }
 
@@ -182,7 +182,7 @@ h1 {
 
 .empty p {
   margin-bottom: 0.5rem;
-  color: #666;
+  color: var(--color-grey);
 }
 
 .empty .hint {
@@ -190,9 +190,13 @@ h1 {
   color: #999;
 }
 
-.loading {
+.loading,
+.empty {
   text-align: center;
-  padding: 2rem;
+  padding: 60px 20px;
+  color: #6b7280;
+  background: white;
+  border-radius: 8px;
 }
 
 .alert {

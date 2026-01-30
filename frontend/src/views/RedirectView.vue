@@ -14,6 +14,6 @@
   justify-content: center;
   align-items: center;
   height: 100vh;
-  color: #666;
+  color: var(--color-grey);
 }
 </style>

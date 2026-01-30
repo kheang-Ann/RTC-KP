@@ -11,7 +11,7 @@ export interface Attendance {
   markedById?: number
   remarks?: string
   createdAt?: string
-  student?: { id: number; firstName: string; lastName: string }
+  student?: { id: number; nameKhmer: string | null; nameLatin: string | null }
   session?: {
     id: string
     title: string

@@ -73,7 +73,7 @@ function formatDate(dateStr?: string) {
 
 <template>
   <div class="student-dashboard">
-    <h1>Welcome, {{ user?.firstName }} {{ user?.lastName }}</h1>
+    <h1>Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
     <p class="subtitle">Student Dashboard</p>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
@@ -87,7 +87,7 @@ function formatDate(dateStr?: string) {
           <div class="stat-value">{{ enrollments.length }}</div>
           <div class="stat-label">Enrolled Courses</div>
         </div>
-        <div class="stat-card stat-primary">
+        <div class="stat-card border-left-blue">
           <div class="stat-value">{{ stats.attendanceRate }}%</div>
           <div class="stat-label">Attendance Rate</div>
         </div>
@@ -95,11 +95,11 @@ function formatDate(dateStr?: string) {
           <div class="stat-value">{{ stats.present }}</div>
           <div class="stat-label">Present</div>
         </div>
-        <div class="stat-card stat-warning">
+        <div class="stat-card border-left-orange">
           <div class="stat-value">{{ stats.late }}</div>
           <div class="stat-label">Late</div>
         </div>
-        <div class="stat-card stat-danger">
+        <div class="stat-card border-left-lightred">
           <div class="stat-value">{{ stats.absent }}</div>
           <div class="stat-label">Absent</div>
         </div>
@@ -176,7 +176,7 @@ h1 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--color-grey);
   margin-bottom: 1.5rem;
 }
 
@@ -198,19 +198,16 @@ h1 {
 .stat-value {
   font-size: 2rem;
   font-weight: bold;
-  color: #333;
+  color: var(--color-dark-grey);
 }
 
 .stat-label {
-  color: #666;
+  color: var(--color-grey);
   font-size: 0.875rem;
   margin-top: 0.25rem;
 }
 
-.stat-primary .stat-value { color: #007bff; }
 .stat-success .stat-value { color: #28a745; }
-.stat-warning .stat-value { color: #ffc107; }
-.stat-danger .stat-value { color: #dc3545; }
 
 .section {
   margin-bottom: 2rem;
@@ -236,7 +233,7 @@ h1 {
   border-radius: 8px;
   padding: 1.5rem 2rem;
   text-decoration: none;
-  color: #333;
+  color: var(--color-dark-grey);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -270,7 +267,7 @@ h1 {
 
 .course-code {
   font-size: 0.75rem;
-  color: #666;
+  color: var(--color-grey);
   text-transform: uppercase;
 }
 
@@ -335,17 +332,13 @@ h1 {
 .status-absent { background: #f8d7da; color: #721c24; }
 .status-excused { background: #cce5ff; color: #004085; }
 
+.loading,
 .empty {
   text-align: center;
-  padding: 2rem;
-  color: #666;
+  padding: 60px 20px;
+  color: #6b7280;
   background: white;
   border-radius: 8px;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
 }
 
 .alert {

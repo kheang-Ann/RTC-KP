@@ -1,22 +1,34 @@
 import api from './api'
 
+export type EnrollmentStatus = 'active' | 'completed' | 'failed' | 'dropped'
+
+export const ENROLLMENT_STATUS_OPTIONS: { value: EnrollmentStatus; label: string }[] = [
+  { value: 'active', label: 'Active' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'dropped', label: 'Dropped' },
+]
+
 export interface Enrollment {
   id: string
   studentId: number
   courseId: string
   enrolledAt: string
-  status: 'active' | 'completed' | 'dropped'
-  student?: { id: number; firstName: string; lastName: string; email: string }
+  createdAt: string
+  status: EnrollmentStatus
+  student?: { id: number; nameKhmer: string | null; nameLatin: string | null; email: string }
   course?: { id: string; name: string; code: string }
 }
 
 export interface CreateEnrollmentDto {
   studentId: number
   courseId: string
+  status?: EnrollmentStatus
 }
 
 export interface UpdateEnrollmentDto {
-  status?: 'active' | 'completed' | 'dropped'
+  enrolledAt?: string
+  status?: EnrollmentStatus
 }
 
 export const enrollmentsService = {

@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { sessionsService, type Session, type CreateSessionDto, type SessionStatus } from '@/services/sessions'
 import { coursesService, type Course } from '@/services/courses'
+import { departmentsService, type Department } from '@/services/departments'
+import { programsService, type Program } from '@/services/programs'
 
 const sessions = ref<Session[]>([])
 const courses = ref<Course[]>([])
+const departments = ref<Department[]>([])
+const programs = ref<Program[]>([])
+const selectedDepartment = ref<number | null>(null)
+const selectedProgram = ref<number | null>(null)
 const selectedCourse = ref<string>('')
 const loading = ref(false)
 const error = ref('')
@@ -22,9 +28,29 @@ const form = ref<CreateSessionDto>({
   endTime: '',
 })
 
+const filteredPrograms = computed(() => {
+  if (!selectedDepartment.value) return programs.value
+  return programs.value.filter((p) => p.departmentId === selectedDepartment.value)
+})
+
+const filteredCourses = computed(() => {
+  if (!selectedDepartment.value) return courses.value
+  return courses.value.filter((c) => c.departmentId === selectedDepartment.value)
+})
+
 const filteredSessions = computed(() => {
   if (!selectedCourse.value) return sessions.value
   return sessions.value.filter((s) => s.courseId === selectedCourse.value)
+})
+
+// Reset selections when parent filter changes
+watch(selectedDepartment, () => {
+  selectedProgram.value = null
+  selectedCourse.value = ''
+})
+
+watch(selectedProgram, () => {
+  selectedCourse.value = ''
 })
 
 onMounted(async () => {
@@ -35,12 +61,16 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [sessionsData, coursesData] = await Promise.all([
+    const [sessionsData, coursesData, departmentsData, programsData] = await Promise.all([
       sessionsService.getAll(),
       coursesService.getMyCourses(),
+      departmentsService.getAll(),
+      programsService.getAll(),
     ])
     sessions.value = sessionsData
     courses.value = coursesData
+    departments.value = departmentsData
+    programs.value = programsData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -203,10 +233,28 @@ function getStatusLabel(status: SessionStatus) {
     <!-- Filter -->
     <div class="filters">
       <div class="filter-group">
+        <label>Filter by Department</label>
+        <select v-model="selectedDepartment">
+          <option :value="null">All Departments</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.id">
+            {{ dept.name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Filter by Program</label>
+        <select v-model="selectedProgram" :disabled="!selectedDepartment">
+          <option :value="null">All Programs</option>
+          <option v-for="program in filteredPrograms" :key="program.id" :value="program.id">
+            {{ program.name }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
         <label>Filter by Course</label>
-        <select v-model="selectedCourse">
+        <select v-model="selectedCourse" :disabled="!selectedDepartment">
           <option value="">All Courses</option>
-          <option v-for="course in courses" :key="course.id" :value="course.id">
+          <option v-for="course in filteredCourses" :key="course.id" :value="course.id">
             {{ course.code || course.name }} - {{ course.name }}
           </option>
         </select>
@@ -300,7 +348,7 @@ function getStatusLabel(status: SessionStatus) {
             <select v-model="form.courseId" required>
               <option value="" disabled>Select a course</option>
               <option v-for="course in courses" :key="course.id" :value="course.id">
-                {{ course.code || course.name }} - {{ course.name }}
+                {{ course.code || course.name }} - {{ course.name }} ({{ course.department?.name || 'No Dept' }})
               </option>
             </select>
           </div>
@@ -453,7 +501,7 @@ function getStatusLabel(status: SessionStatus) {
 }
 
 .btn-danger {
-  background: #ef4444;
+  background: var(--color-light-red);
   color: white;
 }
 
@@ -524,17 +572,12 @@ function getStatusLabel(status: SessionStatus) {
   color: #065f46;
 }
 
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: #6b7280;
-}
-
+.loading,
 .empty {
   text-align: center;
-  padding: 40px;
+  padding: 60px 20px;
   color: #6b7280;
-  background: #f9fafb;
+  background: white;
   border-radius: 8px;
 }
 

@@ -12,6 +12,9 @@ import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { AttendancesModule } from './modules/attendances/attendances.module';
 import { LeaveRequestsModule } from './modules/leave-requests/leave-requests.module';
+import { ProgramModule } from './modules/programs/program.module';
+import { StudentModule } from './modules/students/student.module';
+import { TeacherModule } from './modules/teachers/teacher.module';
 
 @Module({
   imports: [
@@ -38,6 +41,9 @@ import { LeaveRequestsModule } from './modules/leave-requests/leave-requests.mod
     SessionsModule,
     AttendancesModule,
     LeaveRequestsModule,
+    ProgramModule,
+    StudentModule,
+    TeacherModule,
   ],
   controllers: [AppController],
   providers: [AppService],

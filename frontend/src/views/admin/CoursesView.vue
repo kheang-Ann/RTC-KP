@@ -120,7 +120,7 @@ async function deleteCourse(id: string) {
           <td>{{ course.name }}</td>
           <td>{{ course.credits }}</td>
           <td>{{ course.department?.name || '-' }}</td>
-          <td>{{ course.teacher ? `${course.teacher.firstName} ${course.teacher.lastName}` : '-' }}</td>
+          <td>{{ course.teacher ? (course.teacher.nameLatin || course.teacher.nameKhmer || '-') : '-' }}</td>
           <td>
             <button class="btn btn-sm" @click="openEdit(course)">Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteCourse(course.id)">Delete</button>
@@ -160,7 +160,7 @@ async function deleteCourse(id: string) {
             <select v-model.number="form.teacherId">
               <option :value="undefined">No teacher assigned</option>
               <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
-                {{ teacher.firstName }} {{ teacher.lastName }}
+                {{ teacher.nameLatin || teacher.nameKhmer || teacher.email }}
               </option>
             </select>
           </div>
@@ -193,18 +193,26 @@ async function deleteCourse(id: string) {
 .table {
   width: 100%;
   border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .table th,
 .table td {
-  padding: 12px;
+  padding: 12px 16px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #eee;
 }
 
 .table th {
-  background-color: #f5f5f5;
+  background: #f5f5f5;
   font-weight: 600;
+}
+
+.table tr:hover {
+  background: #fafafa;
 }
 
 .btn {
@@ -216,15 +224,15 @@ async function deleteCourse(id: string) {
 }
 
 .btn-primary {
-  background: #4f46e5;
+  background: var(--color-purple);
   color: white;
-  border-color: #4f46e5;
+  border-color: var(--color-purple);
 }
 
 .btn-danger {
-  background: #ef4444;
+  background: var(--color-light-red);
   color: white;
-  border-color: #ef4444;
+  border-color: var(--color-light-red);
 }
 
 .btn-sm {
@@ -289,7 +297,9 @@ async function deleteCourse(id: string) {
 .loading,
 .empty {
   text-align: center;
-  padding: 40px;
-  color: #666;
+  padding: 60px 20px;
+  color: #6b7280;
+  background: white;
+  border-radius: 8px;
 }
 </style>

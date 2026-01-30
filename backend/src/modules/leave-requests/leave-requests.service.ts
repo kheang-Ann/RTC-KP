@@ -9,61 +9,100 @@ import { Repository } from 'typeorm';
 import {
   LeaveRequest,
   LeaveRequestStatus,
+  RequesterType,
 } from './entities/leave-request.entity';
 import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { ReviewLeaveRequestDto } from './dto/review-leave-request.dto';
-import { Course } from '../courses/entities/course.entity';
-import { Enrollment } from '../enrollments/entities/enrollment.entity';
-import { Attendance } from '../attendances/entities/attendance.entity';
-import { AttendanceStatus } from '../attendances/entities/attendance.entity';
+import { Student } from '../students/entities/student.entity';
+import { Teacher } from '../teachers/entities/teacher.entity';
 
 @Injectable()
 export class LeaveRequestsService {
   constructor(
     @InjectRepository(LeaveRequest)
     private leaveRequestRepo: Repository<LeaveRequest>,
-    @InjectRepository(Course)
-    private courseRepo: Repository<Course>,
-    @InjectRepository(Enrollment)
-    private enrollmentRepo: Repository<Enrollment>,
-    @InjectRepository(Attendance)
-    private attendanceRepo: Repository<Attendance>,
+    @InjectRepository(Student)
+    private studentRepo: Repository<Student>,
+    @InjectRepository(Teacher)
+    private teacherRepo: Repository<Teacher>,
   ) {}
+
+  private calculateTotalDays(startDate: Date, endDate: Date): number {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  }
 
   async create(
     dto: CreateLeaveRequestDto,
-    studentId: number,
+    userId: number,
+    requesterType: RequesterType,
+    documentPath?: string,
   ): Promise<LeaveRequest> {
-    // Check if student is enrolled in the course
-    const enrollment = await this.enrollmentRepo.findOne({
-      where: { studentId, courseId: dto.courseId },
-    });
+    const startDate = new Date(dto.startDate);
+    const endDate = new Date(dto.endDate);
 
-    if (!enrollment) {
-      throw new ForbiddenException('You are not enrolled in this course');
+    // Validate dates
+    if (endDate < startDate) {
+      throw new BadRequestException('End date cannot be before start date');
     }
 
-    // Check for duplicate leave request
-    const existing = await this.leaveRequestRepo.findOne({
-      where: {
-        studentId,
-        courseId: dto.courseId,
-        leaveDate: new Date(dto.leaveDate),
-      },
-    });
+    const totalDays = this.calculateTotalDays(startDate, endDate);
 
-    if (existing) {
+    let studentId: number | null = null;
+    let teacherId: number | null = null;
+
+    // Find student or teacher based on requester type
+    if (requesterType === RequesterType.STUDENT) {
+      const student = await this.studentRepo.findOne({
+        where: { userId },
+      });
+      if (!student) {
+        throw new NotFoundException('Student profile not found');
+      }
+      studentId = student.id;
+    } else if (requesterType === RequesterType.TEACHER) {
+      const teacher = await this.teacherRepo.findOne({
+        where: { userId },
+      });
+      if (!teacher) {
+        throw new NotFoundException('Teacher profile not found');
+      }
+      teacherId = teacher.id;
+    }
+
+    // Check for overlapping leave requests
+    const overlapping = await this.leaveRequestRepo
+      .createQueryBuilder('lr')
+      .where('lr.userId = :userId', { userId })
+      .andWhere('lr.status != :rejected', {
+        rejected: LeaveRequestStatus.REJECTED,
+      })
+      .andWhere('(lr.startDate <= :endDate AND lr.endDate >= :startDate)', {
+        startDate: dto.startDate,
+        endDate: dto.endDate,
+      })
+      .getOne();
+
+    if (overlapping) {
       throw new BadRequestException(
-        'You already have a leave request for this date',
+        'You already have a leave request for overlapping dates',
       );
     }
 
     const leaveRequest = this.leaveRequestRepo.create({
+      userId,
+      requesterType,
       studentId,
-      courseId: dto.courseId,
-      sessionId: dto.sessionId || null,
-      leaveDate: new Date(dto.leaveDate),
+      teacherId,
+      leaveType: dto.leaveType,
+      startDate,
+      endDate,
+      totalDays,
       reason: dto.reason,
+      documentPath: documentPath || null,
       status: LeaveRequestStatus.PENDING,
     });
 
@@ -72,47 +111,15 @@ export class LeaveRequestsService {
 
   async findAll(): Promise<LeaveRequest[]> {
     return this.leaveRequestRepo.find({
-      relations: ['student', 'course', 'session', 'reviewedBy'],
+      relations: ['user', 'student', 'teacher', 'reviewedBy'],
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findByStudent(studentId: number): Promise<LeaveRequest[]> {
+  async findByUser(userId: number): Promise<LeaveRequest[]> {
     return this.leaveRequestRepo.find({
-      where: { studentId },
-      relations: ['course', 'session', 'reviewedBy'],
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async findByTeacher(teacherId: number): Promise<LeaveRequest[]> {
-    // Get courses taught by this teacher
-    const courses = await this.courseRepo.find({
-      where: { teacherId },
-      select: ['id'],
-    });
-
-    if (courses.length === 0) {
-      return [];
-    }
-
-    const courseIds = courses.map((c) => c.id);
-
-    return this.leaveRequestRepo
-      .createQueryBuilder('lr')
-      .leftJoinAndSelect('lr.student', 'student')
-      .leftJoinAndSelect('lr.course', 'course')
-      .leftJoinAndSelect('lr.session', 'session')
-      .leftJoinAndSelect('lr.reviewedBy', 'reviewedBy')
-      .where('lr.courseId IN (:...courseIds)', { courseIds })
-      .orderBy('lr.createdAt', 'DESC')
-      .getMany();
-  }
-
-  async findByCourse(courseId: string): Promise<LeaveRequest[]> {
-    return this.leaveRequestRepo.find({
-      where: { courseId },
-      relations: ['student', 'session', 'reviewedBy'],
+      where: { userId },
+      relations: ['reviewedBy'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -120,7 +127,7 @@ export class LeaveRequestsService {
   async findOne(id: string): Promise<LeaveRequest> {
     const leaveRequest = await this.leaveRequestRepo.findOne({
       where: { id },
-      relations: ['student', 'course', 'session', 'reviewedBy'],
+      relations: ['user', 'student', 'teacher', 'reviewedBy'],
     });
 
     if (!leaveRequest) {
@@ -130,25 +137,97 @@ export class LeaveRequestsService {
     return leaveRequest;
   }
 
+  async findOneWithDetails(id: string): Promise<{
+    leaveRequest: LeaveRequest;
+    contactDetails: {
+      name: string;
+      nameKhmer: string;
+      email: string;
+      phoneNumbers: string[];
+      emergencyPhoneNumbers?: string[];
+      department?: string;
+      program?: string;
+      type: string;
+    };
+  }> {
+    const leaveRequest = await this.leaveRequestRepo.findOne({
+      where: { id },
+      relations: [
+        'user',
+        'student',
+        'student.department',
+        'student.program',
+        'teacher',
+        'teacher.department',
+        'reviewedBy',
+      ],
+    });
+
+    if (!leaveRequest) {
+      throw new NotFoundException('Leave request not found');
+    }
+
+    let contactDetails: {
+      name: string;
+      nameKhmer: string;
+      email: string;
+      phoneNumbers: string[];
+      emergencyPhoneNumbers?: string[];
+      department?: string;
+      program?: string;
+      type: string;
+    };
+
+    if (
+      leaveRequest.requesterType === RequesterType.STUDENT &&
+      leaveRequest.student
+    ) {
+      contactDetails = {
+        name: leaveRequest.student.nameLatin,
+        nameKhmer: leaveRequest.student.nameKhmer,
+        email: leaveRequest.student.personalEmail,
+        phoneNumbers: leaveRequest.student.phoneNumbers,
+        emergencyPhoneNumbers: leaveRequest.student.emergencyPhoneNumbers,
+        department: leaveRequest.student.department?.name,
+        program: leaveRequest.student.program?.name,
+        type: 'Student',
+      };
+    } else if (
+      leaveRequest.requesterType === RequesterType.TEACHER &&
+      leaveRequest.teacher
+    ) {
+      contactDetails = {
+        name: leaveRequest.teacher.nameLatin,
+        nameKhmer: leaveRequest.teacher.nameKhmer,
+        email: leaveRequest.teacher.personalEmail,
+        phoneNumbers: leaveRequest.teacher.phoneNumbers,
+        department: leaveRequest.teacher.department?.name,
+        type: 'Teacher',
+      };
+    } else {
+      contactDetails = {
+        name: leaveRequest.user?.nameLatin || 'Unknown',
+        nameKhmer: leaveRequest.user?.nameKhmer || 'Unknown',
+        email: leaveRequest.user?.email || 'Unknown',
+        phoneNumbers: [],
+        type: leaveRequest.requesterType,
+      };
+    }
+
+    return { leaveRequest, contactDetails };
+  }
+
   async review(
     id: string,
     dto: ReviewLeaveRequestDto,
     reviewerId: number,
-    isAdmin: boolean = false,
   ): Promise<LeaveRequest> {
     const leaveRequest = await this.findOne(id);
 
-    // Check if teacher owns the course (unless admin)
-    if (!isAdmin) {
-      const course = await this.courseRepo.findOne({
-        where: { id: leaveRequest.courseId },
-      });
-
-      if (!course || course.teacherId !== reviewerId) {
-        throw new ForbiddenException(
-          'You can only review leave requests for your courses',
-        );
-      }
+    if (leaveRequest.status !== LeaveRequestStatus.PENDING) {
+      throw new BadRequestException(
+        'This leave request has already been reviewed',
+      );
     }
 
     leaveRequest.status = dto.status;
@@ -156,35 +235,7 @@ export class LeaveRequestsService {
     leaveRequest.reviewedById = reviewerId;
     leaveRequest.reviewedAt = new Date();
 
-    const savedRequest = await this.leaveRequestRepo.save(leaveRequest);
-
-    // If approved and there's a session, mark attendance as excused
-    if (dto.status === LeaveRequestStatus.APPROVED && leaveRequest.sessionId) {
-      let attendance = await this.attendanceRepo.findOne({
-        where: {
-          studentId: leaveRequest.studentId,
-          sessionId: leaveRequest.sessionId,
-        },
-      });
-
-      if (attendance) {
-        attendance.status = AttendanceStatus.EXCUSED;
-        attendance.remarks = `Approved leave: ${leaveRequest.reason}`;
-        await this.attendanceRepo.save(attendance);
-      } else {
-        // Create excused attendance record
-        attendance = this.attendanceRepo.create({
-          studentId: leaveRequest.studentId,
-          sessionId: leaveRequest.sessionId,
-          status: AttendanceStatus.EXCUSED,
-          remarks: `Approved leave: ${leaveRequest.reason}`,
-          markedById: reviewerId,
-        });
-        await this.attendanceRepo.save(attendance);
-      }
-    }
-
-    return savedRequest;
+    return this.leaveRequestRepo.save(leaveRequest);
   }
 
   async remove(
@@ -194,8 +245,8 @@ export class LeaveRequestsService {
   ): Promise<void> {
     const leaveRequest = await this.findOne(id);
 
-    // Only the student who created or admin can delete
-    if (!isAdmin && leaveRequest.studentId !== userId) {
+    // Only the user who created or admin can delete
+    if (!isAdmin && leaveRequest.userId !== userId) {
       throw new ForbiddenException(
         'You can only delete your own leave requests',
       );

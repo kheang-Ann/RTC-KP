@@ -1,39 +1,48 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { leaveRequestsService, type LeaveRequest, type ReviewLeaveRequestDto } from '@/services/leave-requests'
-import { coursesService, type Course } from '@/services/courses'
+import {
+  leaveRequestsService,
+  type LeaveRequest,
+  type CreateLeaveRequestDto,
+  type LeaveType,
+} from '@/services/leave-requests'
 
 const leaveRequests = ref<LeaveRequest[]>([])
-const courses = ref<Course[]>([])
-const selectedCourse = ref<string>('')
-const selectedStatus = ref<string>('pending')
 const loading = ref(false)
 const error = ref('')
 const successMessage = ref('')
-const showReviewModal = ref(false)
-const reviewingRequest = ref<LeaveRequest | null>(null)
+const showModal = ref(false)
+const documentFile = ref<File | null>(null)
 
-const reviewForm = ref<ReviewLeaveRequestDto>({
-  status: 'approved',
-  reviewNote: '',
+const leaveTypes: { value: LeaveType; label: string }[] = [
+  { value: 'sick', label: 'Sick Leave' },
+  { value: 'annual', label: 'Annual Leave' },
+  { value: 'emergency', label: 'Emergency Leave' },
+  { value: 'other', label: 'Other' },
+]
+
+const form = ref<CreateLeaveRequestDto>({
+  leaveType: 'sick',
+  startDate: new Date().toISOString().split('T')[0]!,
+  endDate: new Date().toISOString().split('T')[0]!,
+  reason: '',
 })
 
-const filteredRequests = computed(() => {
-  let result = leaveRequests.value
-
-  if (selectedCourse.value) {
-    result = result.filter((r) => r.courseId === selectedCourse.value)
-  }
-
-  if (selectedStatus.value) {
-    result = result.filter((r) => r.status === selectedStatus.value)
-  }
-
-  return result
+const totalDays = computed(() => {
+  if (!form.value.startDate || !form.value.endDate) return 0
+  const start = new Date(form.value.startDate)
+  const end = new Date(form.value.endDate)
+  if (end < start) return 0
+  const diffTime = Math.abs(end.getTime() - start.getTime())
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1
 })
 
-const pendingCount = computed(() => 
-  leaveRequests.value.filter((r) => r.status === 'pending').length
+const pendingRequests = computed(() =>
+  leaveRequests.value.filter((r) => r.status === 'pending')
+)
+
+const reviewedRequests = computed(() =>
+  leaveRequests.value.filter((r) => r.status !== 'pending')
 )
 
 onMounted(async () => {
@@ -44,12 +53,7 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [requestsData, coursesData] = await Promise.all([
-      leaveRequestsService.getTeacherLeaveRequests(),
-      coursesService.getMyCourses(),
-    ])
-    leaveRequests.value = requestsData
-    courses.value = coursesData
+    leaveRequests.value = await leaveRequestsService.getMyLeaveRequests()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -57,24 +61,43 @@ async function loadData() {
   }
 }
 
-function openReviewModal(request: LeaveRequest) {
-  reviewingRequest.value = request
-  reviewForm.value = {
-    status: 'approved',
-    reviewNote: '',
+function openModal() {
+  form.value = {
+    leaveType: 'sick',
+    startDate: new Date().toISOString().split('T')[0]!,
+    endDate: new Date().toISOString().split('T')[0]!,
+    reason: '',
   }
-  showReviewModal.value = true
+  documentFile.value = null
+  showModal.value = true
 }
 
-async function submitReview() {
-  if (!reviewingRequest.value) return
+function handleFileChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    documentFile.value = target.files[0]!
+  } else {
+    documentFile.value = null
+  }
+}
+
+async function submitRequest() {
+  if (!form.value.reason || !form.value.startDate || !form.value.endDate) {
+    error.value = 'Please fill in all required fields'
+    return
+  }
+
+  if (new Date(form.value.endDate) < new Date(form.value.startDate)) {
+    error.value = 'End date cannot be before start date'
+    return
+  }
 
   loading.value = true
   error.value = ''
   try {
-    await leaveRequestsService.review(reviewingRequest.value.id, reviewForm.value)
-    successMessage.value = `Leave request ${reviewForm.value.status}!`
-    showReviewModal.value = false
+    await leaveRequestsService.createTeacherRequest(form.value, documentFile.value || undefined)
+    successMessage.value = 'Leave request submitted successfully!'
+    showModal.value = false
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
   } catch (e) {
@@ -84,32 +107,14 @@ async function submitReview() {
   }
 }
 
-async function quickApprove(request: LeaveRequest) {
-  if (!confirm('Approve this leave request?')) return
+async function cancelRequest(id: string) {
+  if (!confirm('Are you sure you want to cancel this leave request?')) return
 
   loading.value = true
   error.value = ''
   try {
-    await leaveRequestsService.review(request.id, { status: 'approved' })
-    successMessage.value = 'Leave request approved!'
-    setTimeout(() => (successMessage.value = ''), 3000)
-    await loadData()
-  } catch (e) {
-    error.value = (e as Error).message
-  } finally {
-    loading.value = false
-  }
-}
-
-async function quickReject(request: LeaveRequest) {
-  const note = prompt('Rejection reason (optional):')
-  if (note === null) return // User cancelled
-
-  loading.value = true
-  error.value = ''
-  try {
-    await leaveRequestsService.review(request.id, { status: 'rejected', reviewNote: note || undefined })
-    successMessage.value = 'Leave request rejected!'
+    await leaveRequestsService.delete(id)
+    successMessage.value = 'Leave request cancelled!'
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
   } catch (e) {
@@ -126,6 +131,16 @@ function getStatusClass(status: string) {
     rejected: 'status-rejected',
   }
   return classes[status] || ''
+}
+
+function getLeaveTypeLabel(type: LeaveType) {
+  const typeMap: Record<LeaveType, string> = {
+    sick: 'Sick Leave',
+    annual: 'Annual Leave',
+    emergency: 'Emergency Leave',
+    other: 'Other',
+  }
+  return typeMap[type] || type
 }
 
 function formatDate(dateStr: string) {
@@ -150,137 +165,123 @@ function formatDateTime(dateStr: string) {
 <template>
   <div class="leave-requests-view">
     <div class="header">
-      <div>
-        <h1>Leave Requests</h1>
-        <p class="subtitle" v-if="pendingCount > 0">{{ pendingCount }} pending request(s)</p>
-      </div>
+      <h1>Leave Requests</h1>
+      <button class="btn btn-primary" @click="openModal">+ New Request</button>
     </div>
 
     <div v-if="error" class="alert alert-error">{{ error }}</div>
     <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
 
-    <!-- Filters -->
-    <div class="filters">
-      <div class="filter-group">
-        <label>Course</label>
-        <select v-model="selectedCourse">
-          <option value="">All Courses</option>
-          <option v-for="course in courses" :key="course.id" :value="course.id">
-            {{ course.code || course.name }} - {{ course.name }}
-          </option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Status</label>
-        <select v-model="selectedStatus">
-          <option value="">All</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
-      </div>
-    </div>
-
     <div v-if="loading" class="loading">Loading...</div>
 
     <template v-else>
-      <table v-if="filteredRequests.length" class="table">
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Course</th>
-            <th>Leave Date</th>
-            <th>Reason</th>
-            <th>Status</th>
-            <th>Submitted</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="request in filteredRequests" :key="request.id">
-            <td>
-              <div class="student-name">{{ request.student?.firstName }} {{ request.student?.lastName }}</div>
-              <div class="student-email">{{ request.student?.email }}</div>
-            </td>
-            <td>{{ request.course?.code || request.course?.name }}</td>
-            <td>{{ formatDate(request.leaveDate) }}</td>
-            <td class="reason-cell">
-              <div class="reason-text">{{ request.reason }}</div>
-              <div v-if="request.session" class="session-info">
-                Session: {{ request.session.title }}
+      <!-- Pending Requests -->
+      <div class="section">
+        <h2>Pending Requests ({{ pendingRequests.length }})</h2>
+        <div v-if="pendingRequests.length" class="requests-list">
+          <div v-for="request in pendingRequests" :key="request.id" class="request-card pending">
+            <div class="request-info">
+              <div class="request-type">{{ getLeaveTypeLabel(request.leaveType) }}</div>
+              <div class="request-date">
+                {{ formatDate(request.startDate) }} - {{ formatDate(request.endDate) }}
+                <span class="days-badge">({{ request.totalDays }} day{{ request.totalDays > 1 ? 's' : '' }})</span>
               </div>
-            </td>
-            <td>
+              <div class="request-reason">{{ request.reason }}</div>
+              <div v-if="request.documentPath" class="request-document">
+                <a :href="request.documentPath" target="_blank">📎 View Document</a>
+              </div>
+              <div class="request-meta">Submitted: {{ formatDateTime(request.createdAt) }}</div>
+            </div>
+            <div class="request-actions">
               <span class="status-badge" :class="getStatusClass(request.status)">{{ request.status }}</span>
-            </td>
-            <td>{{ formatDateTime(request.createdAt) }}</td>
-            <td class="actions">
-              <template v-if="request.status === 'pending'">
-                <button class="btn btn-sm btn-success" @click="quickApprove(request)">Approve</button>
-                <button class="btn btn-sm btn-danger" @click="quickReject(request)">Reject</button>
-                <button class="btn btn-sm" @click="openReviewModal(request)">Review</button>
-              </template>
-              <template v-else>
-                <div class="reviewed-info">
-                  <span v-if="request.reviewedBy">
-                    by {{ request.reviewedBy.firstName }}
-                  </span>
-                  <span v-if="request.reviewNote" class="review-note" :title="request.reviewNote">
-                    📝
-                  </span>
-                </div>
-              </template>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <div v-else class="empty">No leave requests found.</div>
-    </template>
-
-    <!-- Review Modal -->
-    <div v-if="showReviewModal && reviewingRequest" class="modal-overlay" @click.self="showReviewModal = false">
-      <div class="modal">
-        <h2>Review Leave Request</h2>
-        
-        <div class="review-details">
-          <p><strong>Student:</strong> {{ reviewingRequest.student?.firstName }} {{ reviewingRequest.student?.lastName }}</p>
-          <p><strong>Course:</strong> {{ reviewingRequest.course?.code || reviewingRequest.course?.name }}</p>
-          <p><strong>Leave Date:</strong> {{ formatDate(reviewingRequest.leaveDate) }}</p>
-          <p><strong>Reason:</strong> {{ reviewingRequest.reason }}</p>
-        </div>
-
-        <form @submit.prevent="submitReview">
-          <div class="form-group">
-            <label>Decision</label>
-            <div class="decision-buttons">
-              <button
-                type="button"
-                class="decision-btn"
-                :class="{ active: reviewForm.status === 'approved', approved: reviewForm.status === 'approved' }"
-                @click="reviewForm.status = 'approved'"
-              >
-                ✓ Approve
-              </button>
-              <button
-                type="button"
-                class="decision-btn"
-                :class="{ active: reviewForm.status === 'rejected', rejected: reviewForm.status === 'rejected' }"
-                @click="reviewForm.status = 'rejected'"
-              >
-                ✗ Reject
-              </button>
+              <button class="btn btn-sm btn-danger" @click="cancelRequest(request.id)">Cancel</button>
             </div>
           </div>
+        </div>
+        <div v-else class="empty">No pending leave requests.</div>
+      </div>
+
+      <!-- Reviewed Requests -->
+      <div class="section">
+        <h2>History ({{ reviewedRequests.length }})</h2>
+        <div v-if="reviewedRequests.length" class="requests-list">
+          <div
+            v-for="request in reviewedRequests"
+            :key="request.id"
+            class="request-card"
+            :class="request.status"
+          >
+            <div class="request-info">
+              <div class="request-type">{{ getLeaveTypeLabel(request.leaveType) }}</div>
+              <div class="request-date">
+                {{ formatDate(request.startDate) }} - {{ formatDate(request.endDate) }}
+                <span class="days-badge">({{ request.totalDays }} day{{ request.totalDays > 1 ? 's' : '' }})</span>
+              </div>
+              <div class="request-reason">{{ request.reason }}</div>
+              <div v-if="request.documentPath" class="request-document">
+                <a :href="request.documentPath" target="_blank">📎 View Document</a>
+              </div>
+              <div v-if="request.reviewNote" class="request-review-note">
+                <strong>{{ request.status === 'rejected' ? 'Rejection Reason:' : 'Review Note:' }}</strong>
+                {{ request.reviewNote }}
+              </div>
+              <div class="request-meta">
+                Reviewed by {{ request.reviewedBy?.nameLatin || 'Admin' }}
+                on {{ formatDateTime(request.reviewedAt!) }}
+              </div>
+            </div>
+            <div class="request-actions">
+              <span class="status-badge" :class="getStatusClass(request.status)">{{ request.status }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty">No reviewed requests yet.</div>
+      </div>
+    </template>
+
+    <!-- New Request Modal -->
+    <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+      <div class="modal">
+        <h2>Submit Leave Request</h2>
+        <form @submit.prevent="submitRequest">
           <div class="form-group">
-            <label>Note (optional)</label>
-            <textarea v-model="reviewForm.reviewNote" placeholder="Add a note for the student..." rows="3"></textarea>
+            <label>Leave Type *</label>
+            <select v-model="form.leaveType" required>
+              <option v-for="type in leaveTypes" :key="type.value" :value="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Start Date *</label>
+              <input v-model="form.startDate" type="date" required />
+            </div>
+            <div class="form-group">
+              <label>End Date *</label>
+              <input v-model="form.endDate" type="date" required />
+            </div>
+          </div>
+          <div class="total-days" v-if="totalDays > 0">
+            Total: <strong>{{ totalDays }} day{{ totalDays > 1 ? 's' : '' }}</strong>
+          </div>
+          <div class="form-group">
+            <label>Reason *</label>
+            <textarea
+              v-model="form.reason"
+              required
+              placeholder="Please explain the reason for your leave request..."
+              rows="4"
+            ></textarea>
+          </div>
+          <div class="form-group">
+            <label>Supporting Document (optional)</label>
+            <input type="file" accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" @change="handleFileChange" />
+            <small>Accepted formats: JPG, PNG, PDF, DOC, DOCX (max 10MB)</small>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showReviewModal = false">Cancel</button>
-            <button type="submit" class="btn" :class="reviewForm.status === 'approved' ? 'btn-success' : 'btn-danger'" :disabled="loading">
-              {{ reviewForm.status === 'approved' ? 'Approve' : 'Reject' }}
-            </button>
+            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="submit" class="btn btn-primary" :disabled="loading">Submit Request</button>
           </div>
         </form>
       </div>
@@ -294,6 +295,9 @@ function formatDateTime(dateStr: string) {
 }
 
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
 }
 
@@ -301,89 +305,107 @@ function formatDateTime(dateStr: string) {
   margin: 0;
 }
 
-.subtitle {
-  color: #f59e0b;
-  margin: 0.25rem 0 0 0;
-  font-weight: 500;
+.section {
+  margin-bottom: 2rem;
 }
 
-.filters {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+.section h2 {
+  font-size: 1.125rem;
+  margin-bottom: 1rem;
+  color: var(--color-dark-grey);
 }
 
-.filter-group {
+.requests-list {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 1rem;
 }
 
-.filter-group label {
-  font-size: 0.875rem;
-  color: #666;
-}
-
-.filter-group select {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 180px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
+.request-card {
   background: white;
   border-radius: 8px;
-  overflow: hidden;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #ddd;
 }
 
-.table th,
-.table td {
-  padding: 0.75rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
+.request-card.pending {
+  border-left-color: #f59e0b;
 }
 
-.table th {
-  background: #f5f5f5;
+.request-card.approved {
+  border-left-color: #22c55e;
+}
+
+.request-card.rejected {
+  border-left-color: var(--color-light-red);
+}
+
+.request-type {
   font-weight: 600;
-  font-size: 0.875rem;
+  color: var(--color-purple);
+  font-size: 1rem;
 }
 
-.table td {
-  font-size: 0.875rem;
-}
-
-.student-name {
-  font-weight: 500;
-}
-
-.student-email {
-  color: #888;
-  font-size: 0.75rem;
-}
-
-.reason-cell {
-  max-width: 250px;
-}
-
-.reason-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.session-info {
-  color: #888;
-  font-size: 0.75rem;
+.request-date {
+  color: var(--color-dark-grey);
   margin-top: 0.25rem;
 }
 
+.days-badge {
+  background: #e5e7eb;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+.request-reason {
+  color: var(--color-grey);
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.request-document {
+  margin-top: 0.5rem;
+}
+
+.request-document a {
+  color: var(--color-purple);
+  text-decoration: none;
+  font-size: 0.875rem;
+}
+
+.request-document a:hover {
+  text-decoration: underline;
+}
+
+.request-review-note {
+  background: #f5f5f5;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.request-meta {
+  color: #888;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.request-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
 .status-badge {
-  padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
@@ -405,58 +427,42 @@ function formatDateTime(dateStr: string) {
   color: #991b1b;
 }
 
-.actions {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.reviewed-info {
-  color: #888;
-  font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.review-note {
-  cursor: help;
-}
-
 .btn {
-  padding: 0.375rem 0.75rem;
+  padding: 0.5rem 1rem;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   transition: background-color 0.2s;
+  background: #e5e7eb;
+}
+
+.btn-primary {
+  background: var(--color-purple);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #4338ca;
+}
+
+.btn-primary:disabled {
+  background: #a5a5a5;
+  cursor: not-allowed;
 }
 
 .btn-sm {
   padding: 0.25rem 0.5rem;
-}
-
-.btn-success {
-  background: #22c55e;
-  color: white;
-}
-
-.btn-success:hover {
-  background: #16a34a;
+  font-size: 0.75rem;
 }
 
 .btn-danger {
-  background: #ef4444;
+  background: var(--color-light-red);
   color: white;
 }
 
 .btn-danger:hover {
   background: #dc2626;
-}
-
-.btn-primary {
-  background: #4f46e5;
-  color: white;
 }
 
 .alert {
@@ -468,24 +474,21 @@ function formatDateTime(dateStr: string) {
 .alert-error {
   background: #fee2e2;
   color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
 .alert-success {
   background: #dcfce7;
   color: #166534;
+  border: 1px solid #bbf7d0;
 }
 
-.loading {
-  text-align: center;
-  padding: 2rem;
-  color: #666;
-}
-
+.loading,
 .empty {
   text-align: center;
-  padding: 2rem;
-  color: #888;
-  background: #f9f9f9;
+  padding: 60px 20px;
+  color: #6b7280;
+  background: white;
   border-radius: 8px;
 }
 
@@ -508,73 +511,54 @@ function formatDateTime(dateStr: string) {
   border-radius: 8px;
   min-width: 450px;
   max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal h2 {
-  margin: 0 0 1rem 0;
-}
-
-.review-details {
-  background: #f9f9f9;
-  padding: 1rem;
-  border-radius: 4px;
-  margin-bottom: 1.5rem;
-}
-
-.review-details p {
-  margin: 0.25rem 0;
-  font-size: 0.875rem;
+  margin: 0 0 1.5rem 0;
 }
 
 .form-group {
   margin-bottom: 1rem;
 }
 
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   font-weight: 500;
 }
 
-.decision-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.decision-btn {
-  flex: 1;
-  padding: 0.75rem;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: all 0.2s;
-}
-
-.decision-btn:hover {
-  background: #f5f5f5;
-}
-
-.decision-btn.active.approved {
-  border-color: #22c55e;
-  background: #dcfce7;
-  color: #166534;
-}
-
-.decision-btn.active.rejected {
-  border-color: #ef4444;
-  background: #fee2e2;
-  color: #991b1b;
-}
-
+.form-group select,
+.form-group input,
 .form-group textarea {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 0.875rem;
-  resize: vertical;
+}
+
+.form-group small {
+  display: block;
+  margin-top: 0.25rem;
+  color: #888;
+  font-size: 0.75rem;
+}
+
+.total-days {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  color: #0369a1;
 }
 
 .modal-actions {

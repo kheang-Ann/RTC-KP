@@ -76,6 +76,45 @@ class ApiService {
   delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, { ...options, method: 'DELETE' })
   }
+
+  private async requestFormData<T>(
+    endpoint: string,
+    method: string,
+    formData: FormData,
+  ): Promise<T> {
+    const url = `${this.baseUrl}${endpoint}`
+
+    const headers: Record<string, string> = {}
+    const token = this.getToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const response = await fetch(url, {
+      method,
+      headers,
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: 'Request failed' }))
+      throw new Error(error.message || `HTTP error! status: ${response.status}`)
+    }
+
+    const text = await response.text()
+    if (!text) {
+      return undefined as T
+    }
+    return JSON.parse(text)
+  }
+
+  postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    return this.requestFormData<T>(endpoint, 'POST', formData)
+  }
+
+  patchFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    return this.requestFormData<T>(endpoint, 'PATCH', formData)
+  }
 }
 
 export const api = new ApiService(API_BASE_URL)
