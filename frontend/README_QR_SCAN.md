@@ -33,6 +33,10 @@ npm install
 ```bash
 npm install jsqr
 ```
+### QR Code generate Library
+```bash
+npm install qrcode && npm install -D @types/qrcode
+```
 
 ### 4. Install HTTPS Plugin (Required for iOS/Mobile)
 ```bash
@@ -325,3 +329,5 @@ For issues or questions, contact the development team.
 ## License
 
 [Your License Here]
+
+

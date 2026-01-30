@@ -99,15 +99,42 @@
         <input 
           v-model="manualCode" 
           type="text" 
-          placeholder="Enter code here..."
-          class="code-input"
+          placeholder="Enter 6-digit code..."
+          class="code-input manual-code-input"
+          maxlength="8"
+          autocomplete="off"
           @keyup.enter="submitManualCode"
+          :disabled="isProcessing"
         />
+        <div class="tips-section">
+          <p class="tip">• The code is case-insensitive</p>
+          <p class="tip">• Ask your teacher if you don't have the code</p>
+        </div>
         <div class="modal-buttons">
-          <button class="btn btn-cancel" @click="showManualInput = false">Cancel</button>
-          <button class="btn btn-submit" @click="submitManualCode">Submit</button>
+          <button class="btn btn-cancel" @click="showManualInput = false" :disabled="isProcessing">Cancel</button>
+          <button class="btn btn-submit" @click="submitManualCode" :disabled="isProcessing || !manualCode.trim()">
+            {{ isProcessing ? 'Processing...' : 'Check In' }}
+          </button>
         </div>
       </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div v-if="showSuccessModal" class="modal-overlay" @click.self="closeSuccessModal">
+      <div class="modal success-modal">
+        <div class="success-icon">✓</div>
+        <h2>Check-in Successful!</h2>
+        <p class="success-course" v-if="checkInResult?.courseName">{{ checkInResult.courseName }}</p>
+        <p class="success-session" v-if="checkInResult?.sessionTitle">{{ checkInResult.sessionTitle }}</p>
+        <p class="success-message">Your attendance has been recorded.</p>
+        <button class="btn btn-submit" @click="closeSuccessModal">Done</button>
+      </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div v-if="isProcessing" class="processing-overlay">
+      <div class="processing-spinner"></div>
+      <p>Processing...</p>
     </div>
 
     <!-- Success/Error Toast -->
@@ -121,17 +148,21 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import jsQR from 'jsqr'
+import { attendanceService } from '@/services/attendance'
 
 const router = useRouter()
 
 // State
-const scanContext = ref('IT-Project Management - ROOM 402')
+const scanContext = ref('Scan QR Code or Enter Attendance Code')
 const isCameraActive = ref(false)
 const isFlashOn = ref(false)
 const hasFlash = ref(false)
 const showManualInput = ref(false)
 const manualCode = ref('')
 const toast = ref({ show: false, message: '', type: 'success' })
+const isProcessing = ref(false)
+const showSuccessModal = ref(false)
+const checkInResult = ref<{ courseName?: string; sessionTitle?: string } | null>(null)
 
 // Refs
 const videoElement = ref<HTMLVideoElement | null>(null)
@@ -278,17 +309,15 @@ const scanQRCode = () => {
   }
 }
 
-const handleQRCodeDetected = (data: string) => {
-  // Stop scanning temporarily
+const handleQRCodeDetected = async (data: string) => {
+  // Stop scanning temporarily to prevent duplicate scans
   if (scanInterval) {
     clearInterval(scanInterval)
     scanInterval = null
   }
 
-  showToast(`QR Code detected: ${data}`, 'success')
-  
   // Process the attendance code
-  processAttendanceCode(data)
+  await processAttendanceCode(data.toUpperCase())
 }
 
 // Image upload handling
@@ -341,29 +370,59 @@ const loadImage = (file: File): Promise<HTMLImageElement> => {
 }
 
 // Manual code submission
-const submitManualCode = () => {
+const submitManualCode = async () => {
   if (!manualCode.value.trim()) {
     showToast('Please enter a code', 'error')
     return
   }
 
-  processAttendanceCode(manualCode.value.trim())
+  const code = manualCode.value.trim().toUpperCase()
   showManualInput.value = false
   manualCode.value = ''
+  await processAttendanceCode(code)
 }
 
 // Process attendance code
-const processAttendanceCode = (code: string) => {
-  // TODO: Send code to backend for verification
-  console.log('Processing attendance code:', code)
-  showToast(`Attendance recorded: ${code}`, 'success')
+const processAttendanceCode = async (code: string) => {
+  if (isProcessing.value) return
   
-  // Resume scanning after a delay
-  setTimeout(() => {
-    if (isCameraActive.value) {
-      startScanning()
+  isProcessing.value = true
+  
+  try {
+    const result = await attendanceService.checkIn(code)
+    
+    // Store result for success modal
+    checkInResult.value = {
+      courseName: result.session?.course?.name || result.session?.courseId || 'Course',
+      sessionTitle: result.session?.title || 'Session',
     }
-  }, 2000)
+    
+    showSuccessModal.value = true
+    showToast('Check-in successful!', 'success')
+  } catch (error) {
+    const errorMessage = (error as Error).message || 'Failed to check in. Please check the code and try again.'
+    showToast(errorMessage, 'error')
+    
+    // Resume scanning after error
+    setTimeout(() => {
+      if (isCameraActive.value) {
+        startScanning()
+      }
+    }, 2000)
+  } finally {
+    isProcessing.value = false
+  }
+}
+
+// Close success modal and reset
+const closeSuccessModal = () => {
+  showSuccessModal.value = false
+  checkInResult.value = null
+  
+  // Resume scanning if camera is active
+  if (isCameraActive.value) {
+    startScanning()
+  }
 }
 
 // Lifecycle
@@ -724,8 +783,125 @@ onUnmounted(() => {
   border: none;
 }
 
-.btn-submit:hover {
+.btn-submit:hover:not(:disabled) {
   background: #0d47a1;
+}
+
+.btn-submit:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Manual Code Input */
+.manual-code-input {
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 0.3rem;
+  text-transform: uppercase;
+  font-family: monospace;
+}
+
+.manual-code-input::placeholder {
+  font-size: 1rem;
+  letter-spacing: normal;
+}
+
+/* Tips Section */
+.tips-section {
+  margin-bottom: 20px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.tips-section .tip {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 4px 0;
+}
+
+/* Success Modal */
+.success-modal {
+  text-align: center;
+  padding: 32px 24px;
+}
+
+.success-modal .success-icon {
+  width: 80px;
+  height: 80px;
+  background: #4caf50;
+  color: white;
+  font-size: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.success-modal h2 {
+  color: #4caf50;
+  margin-bottom: 12px;
+}
+
+.success-course {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 4px 0;
+}
+
+.success-session {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0 0 12px 0;
+}
+
+.success-message {
+  color: #888;
+  margin-bottom: 20px;
+}
+
+.success-modal .btn-submit {
+  width: 100%;
+  padding: 14px 20px;
+}
+
+/* Processing Overlay */
+.processing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 150;
+  color: white;
+}
+
+.processing-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.processing-overlay p {
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 /* Toast */
