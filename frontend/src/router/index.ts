@@ -27,7 +27,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      redirect: '/attendance-scan'
+      redirect: '/home'
     },
     {
       path: '/attendance-scan',
