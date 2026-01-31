@@ -60,7 +60,6 @@ const menuItems: MenuItem[] = [
   { name: 'My Attendance', path: '/student/attendance', icon: '📊', roles: ['student'] },
   { name: 'My Courses', path: '/student/courses', icon: '📚', roles: ['student'] },
   { name: 'Leave Requests', path: '/student/leave-requests', icon: '📝', roles: ['student'] },
-  { name: 'Attendance Scan', path: '/student/attendance-scan', icon: '📷', roles: ['student'] },
   { name: 'Profile', path: '/student/profile', icon: '👤', roles: ['student'] },
 ]
 

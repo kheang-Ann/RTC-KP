@@ -9,6 +9,8 @@ import {
 import { departmentsService, type Department } from '@/services/departments'
 import { isValidPhoneNumber, isValidOptionalPassword } from '@/utils/validation'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const teachers = ref<Teacher[]>([])
 const departments = ref<Department[]>([])
 const loading = ref(false)
@@ -104,7 +106,7 @@ function openEdit(teacher: Teacher) {
     password: '',
   }
   imageFile.value = null
-  imagePreview.value = teacher.image ? `http://localhost:3000${teacher.image}` : null
+  imagePreview.value = teacher.image ? `${API_BASE}${teacher.image}` : null
   showModal.value = true
 }
 
@@ -270,7 +272,7 @@ function getDepartmentName(departmentId: number | undefined): string {
           <td>
             <img
               v-if="teacher.image"
-              :src="`http://localhost:3000${teacher.image}`"
+              :src="`${API_BASE}${teacher.image}`"
               alt="Photo"
               class="avatar"
             />

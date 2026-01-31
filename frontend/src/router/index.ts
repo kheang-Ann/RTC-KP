@@ -25,7 +25,6 @@ const TeacherLeaveRequestsView = () => import('@/views/teacher/LeaveRequestsView
 const AdminLeaveRequestsView = () => import('@/views/admin/LeaveRequestsView.vue')
 const ProfileView = () => import('@/views/ProfileView.vue')
 const RedirectView = () => import('@/views/RedirectView.vue')
-const AttendanceScanView = () => import('@/views/student/AttendanceScan.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,11 +32,6 @@ const router = createRouter({
     {
       path: '/',
       redirect: '/home'
-    },
-    {
-      path: '/attendance-scan',
-      name: 'AttendanceScan',
-      component: AttendanceScanView
     },
 {
   path: '/home',
@@ -184,11 +178,6 @@ const router = createRouter({
           path: 'leave-requests',
           name: 'student-leave-requests',
           component: StudentLeaveRequestsView,
-        },
-        {
-          path: 'attendance-scan',
-          name: 'student-attendance-scan',
-          component: AttendanceScanView,
         },
         {
           path: 'profile',

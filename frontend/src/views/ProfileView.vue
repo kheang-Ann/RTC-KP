@@ -4,6 +4,8 @@ import { authService } from '@/services/auth'
 import { studentsService, type Student } from '@/services/students'
 import { teachersService, type Teacher } from '@/services/teachers'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const user = computed(() => authService.getUser())
 const loading = ref(false)
 const error = ref('')
@@ -18,10 +20,10 @@ const isAdmin = computed(() => user.value?.roles.includes('admin'))
 
 const profileImage = computed(() => {
   if (studentProfile.value?.image) {
-    return `http://localhost:3000${studentProfile.value.image}`
+    return `${API_BASE}${studentProfile.value.image}`
   }
   if (teacherProfile.value?.image) {
-    return `http://localhost:3000${teacherProfile.value.image}`
+    return `${API_BASE}${teacherProfile.value.image}`
   }
   return null
 })
