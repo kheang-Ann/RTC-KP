@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, computed, watch, nextTick } from 'vue'
 import { sessionsService, type Session, type CreateSessionDto, type SessionStatus } from '@/services/sessions'
 import { coursesService, type Course } from '@/services/courses'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
+import QRCode from 'qrcode'
 
 const sessions = ref<Session[]>([])
 const courses = ref<Course[]>([])
@@ -19,6 +20,7 @@ const showModal = ref(false)
 const showCodeModal = ref(false)
 const activeSession = ref<Session | null>(null)
 const editingSession = ref<Session | null>(null)
+const qrCodeDataUrl = ref<string>('')
 
 const form = ref<CreateSessionDto>({
   title: '',
@@ -134,6 +136,7 @@ async function activateSession(session: Session) {
     const updated = await sessionsService.activate(session.id)
     activeSession.value = updated
     showCodeModal.value = true
+    await generateQRCode(updated.attendanceCode)
     successMessage.value = 'Session activated!'
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
@@ -167,6 +170,7 @@ async function regenerateCode(session: Session) {
     const updated = await sessionsService.regenerateCode(session.id)
     activeSession.value = updated
     showCodeModal.value = true
+    await generateQRCode(updated.attendanceCode)
     successMessage.value = 'Code regenerated!'
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
@@ -195,6 +199,27 @@ async function deleteSession(id: string) {
 function showCode(session: Session) {
   activeSession.value = session
   showCodeModal.value = true
+  generateQRCode(session.attendanceCode)
+}
+
+async function generateQRCode(code: string | undefined) {
+  if (!code) {
+    qrCodeDataUrl.value = ''
+    return
+  }
+  try {
+    qrCodeDataUrl.value = await QRCode.toDataURL(code, {
+      width: 200,
+      margin: 2,
+      color: {
+        dark: '#8b5cf6',
+        light: '#ffffff'
+      }
+    })
+  } catch (err) {
+    console.error('Failed to generate QR code:', err)
+    qrCodeDataUrl.value = ''
+  }
 }
 
 function formatDateTimeLocal(date: Date): string {
@@ -380,7 +405,22 @@ function getStatusLabel(status: SessionStatus) {
         <div class="attendance-code">
           {{ activeSession.attendanceCode }}
         </div>
-        <p class="code-instruction">Share this code with students to check in</p>
+        
+        <!-- QR Code Section -->
+        <div class="qr-code-section">
+          <p class="qr-label">Or scan QR Code</p>
+          <div class="qr-code-container">
+            <img 
+              v-if="qrCodeDataUrl" 
+              :src="qrCodeDataUrl" 
+              alt="Attendance QR Code" 
+              class="qr-code-image"
+            />
+            <div v-else class="qr-loading">Generating QR Code...</div>
+          </div>
+        </div>
+        
+        <p class="code-instruction">Share this code or QR with students to check in</p>
         <div class="modal-actions">
           <button class="btn" @click="showCodeModal = false">Close</button>
           <button class="btn btn-primary" @click="regenerateCode(activeSession)">
@@ -666,6 +706,42 @@ function getStatusLabel(status: SessionStatus) {
   border-radius: 12px;
   letter-spacing: 8px;
   margin-bottom: 16px;
+}
+
+.qr-code-section {
+  margin: 20px 0;
+}
+
+.qr-label {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.qr-code-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 2px dashed #e5e7eb;
+}
+
+.qr-code-image {
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+}
+
+.qr-loading {
+  width: 200px;
+  height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #9ca3af;
+  font-size: 14px;
 }
 
 .code-instruction {
