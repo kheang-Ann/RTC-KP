@@ -279,12 +279,13 @@ watch(() => form.value.programId, () => {
         <form @submit.prevent="saveGroup">
           <div class="form-group">
             <label>Program</label>
-            <select v-model.number="form.programId" required>
+            <select v-model.number="form.programId" required :disabled="!!editingGroup">
               <option :value="0" disabled>Select program</option>
               <option v-for="program in programs" :key="program.id" :value="program.id">
                 {{ program.name }} ({{ program.duration }} years)
               </option>
             </select>
+            <small v-if="editingGroup" class="form-hint">Program cannot be changed after creation</small>
           </div>
           <div class="form-group">
             <label>Academic Year</label>

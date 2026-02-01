@@ -282,6 +282,15 @@ export class ScheduleService {
       }
     }
 
+    // Clear relation objects to ensure FK updates work correctly
+    // TypeORM uses relation objects over FK columns when both are present
+    if (dto.courseId !== undefined) {
+      (schedule as any).course = undefined;
+    }
+    if (dto.groupId !== undefined) {
+      (schedule as any).group = undefined;
+    }
+
     Object.assign(schedule, dto);
     return this.scheduleRepo.save(schedule);
   }
