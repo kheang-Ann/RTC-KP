@@ -223,7 +223,7 @@ function cancelDelete() {
           </div>
           <div class="form-group">
             <label>Credits</label>
-            <input v-model.number="form.credits" type="number" min="1" max="10" required />
+            <input v-model.number="form.credits" type="number" min="1" max="5" required />
           </div>
           <div class="form-group">
             <label>Department</label>
@@ -233,9 +233,9 @@ function cancelDelete() {
             </select>
           </div>
           <div class="form-group">
-            <label>Teacher (Optional)</label>
-            <select v-model.number="form.teacherId">
-              <option :value="undefined">No teacher assigned</option>
+            <label>Teacher</label>
+            <select v-model.number="form.teacherId" required>
+              <option :value="undefined" disabled>Select teacher</option>
               <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
                 {{ teacher.nameLatin || teacher.nameKhmer || teacher.email }}
               </option>

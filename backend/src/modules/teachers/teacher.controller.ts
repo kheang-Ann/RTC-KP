@@ -46,7 +46,7 @@ export class TeacherController {
   @Roles('teacher')
   @Get('me')
   async getMyProfile(@Request() req) {
-    return this.teacherService.findByUserId(req.user.id);
+    return this.teacherService.findByUserId(req.user.sub);
   }
 
   @Roles('admin')

@@ -8,6 +8,8 @@ import {
   type LeaveRequestWithDetails,
 } from '@/services/leave-requests'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const leaveRequests = ref<LeaveRequest[]>([])
 const selectedRequesterType = ref<string>('')
 const selectedStatus = ref<string>('')
@@ -395,7 +397,7 @@ function formatDateTime(dateStr: string) {
               </div>
               <div v-if="viewingDetails.leaveRequest.documentPath" class="detail-item">
                 <label>Document</label>
-                <a :href="viewingDetails.leaveRequest.documentPath" target="_blank" class="document-link">
+                <a :href="`${API_BASE}${viewingDetails.leaveRequest.documentPath}`" target="_blank" class="document-link">
                   📎 View Attached Document
                 </a>
               </div>

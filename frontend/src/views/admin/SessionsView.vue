@@ -86,6 +86,8 @@ async function loadData() {
   }
 }
 
+// openCreate is kept for code consistency but admin cannot create sessions
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function openCreate() {
   editingSession.value = null
   const now = new Date()
@@ -218,7 +220,13 @@ function showCode(session: Session) {
 }
 
 function formatDateTimeLocal(date: Date): string {
-  return date.toISOString().slice(0, 16)
+  // Use local time instead of UTC to avoid AM/PM issues
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
 function formatDateTime(dateStr: string) {
@@ -244,7 +252,7 @@ function getStatusLabel(status: SessionStatus) {
   <div class="page-container">
     <div class="page-header-row">
       <h1 class="page-title">Sessions Management</h1>
-      <button class="btn btn-primary" @click="openCreate">+ Create Session</button>
+      <!-- Admin can only view sessions, not create them -->
     </div>
 
     <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>

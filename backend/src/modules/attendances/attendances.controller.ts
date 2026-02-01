@@ -1,5 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/require-await */
 import {
   Controller,
   Get,
@@ -45,7 +49,11 @@ export class AttendancesController {
     @Req() req: any,
   ) {
     const isAdmin = req.user.roles?.includes('admin') ?? false;
-    return this.attendancesService.bulkMarkAttendance(dto, req.user.sub, isAdmin);
+    return this.attendancesService.bulkMarkAttendance(
+      dto,
+      req.user.sub,
+      isAdmin,
+    );
   }
 
   @Get('session/:sessionId')
@@ -63,7 +71,7 @@ export class AttendancesController {
   @Get('my')
   @Roles('student')
   async findMyAttendance(@Req() req: any) {
-    return this.attendancesService.findByStudent(req.user.sub);
+    return this.attendancesService.findByStudentUserId(req.user.sub);
   }
 
   @Get('my/course/:courseId')
@@ -72,7 +80,7 @@ export class AttendancesController {
     @Param('courseId') courseId: string,
     @Req() req: any,
   ) {
-    return this.attendancesService.findByStudentAndCourse(
+    return this.attendancesService.findByStudentUserIdAndCourse(
       req.user.sub,
       courseId,
     );

@@ -201,6 +201,7 @@ function deleteSchedule(id: number) {
 async function confirmDelete() {
   if (deleteTargetId.value === null) return
   showDeleteConfirm.value = false
+  showModal.value = false
   loading.value = true
   try {
     await schedulesService.delete(deleteTargetId.value)

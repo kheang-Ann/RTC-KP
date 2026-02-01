@@ -34,6 +34,9 @@ const statuses: AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
 // For bulk marking
 const bulkAttendances = ref<Record<number, { status: AttendanceStatus; remarks: string }>>({})
 
+// For selective bulk update
+const selectedStudentIds = ref<Set<number>>(new Set())
+
 const filteredPrograms = computed(() => {
   if (!selectedDepartment.value) return programs.value
   return programs.value.filter((p) => p.departmentId === selectedDepartment.value)
@@ -198,6 +201,45 @@ function markAllAs(status: AttendanceStatus) {
   }
 }
 
+// Mark selected students only
+function markSelectedAs(status: AttendanceStatus) {
+  if (selectedStudentIds.value.size === 0) {
+    error.value = 'Please select at least one student'
+    return
+  }
+  for (const studentId of selectedStudentIds.value) {
+    const entry = bulkAttendances.value[studentId]
+    if (entry) {
+      entry.status = status
+    }
+  }
+}
+
+// Toggle student selection
+function toggleStudentSelection(studentId: number) {
+  if (selectedStudentIds.value.has(studentId)) {
+    selectedStudentIds.value.delete(studentId)
+  } else {
+    selectedStudentIds.value.add(studentId)
+  }
+}
+
+// Check if all unmarked students are selected
+const isAllUnmarkedSelected = computed(() => {
+  const unmarkedIds = Object.keys(bulkAttendances.value).map(id => parseInt(id))
+  return unmarkedIds.length > 0 && unmarkedIds.every(id => selectedStudentIds.value.has(id))
+})
+
+// Toggle select all unmarked students
+function toggleSelectAllUnmarked() {
+  const unmarkedIds = Object.keys(bulkAttendances.value).map(id => parseInt(id))
+  if (isAllUnmarkedSelected.value) {
+    unmarkedIds.forEach(id => selectedStudentIds.value.delete(id))
+  } else {
+    unmarkedIds.forEach(id => selectedStudentIds.value.add(id))
+  }
+}
+
 function getStatusClass(status: AttendanceStatus) {
   const classes: Record<AttendanceStatus, string> = {
     present: 'status-present',
@@ -331,9 +373,29 @@ function hasValidationErrors(): boolean {
           {{ status.charAt(0).toUpperCase() + status.slice(1) }}
         </button>
       </div>
+      <div v-if="selectedStudentIds.size > 0" class="bulk-actions selected-actions">
+        <span>Mark {{ selectedStudentIds.size }} selected as:</span>
+        <button
+          v-for="status in statuses"
+          :key="'selected-' + status"
+          class="btn btn-sm"
+          :class="getStatusClass(status)"
+          @click="markSelectedAs(status)"
+        >
+          {{ status.charAt(0).toUpperCase() + status.slice(1) }}
+        </button>
+      </div>
       <table class="page-table">
         <thead>
           <tr>
+            <th>
+              <input 
+                type="checkbox" 
+                :checked="isAllUnmarkedSelected" 
+                @change="toggleSelectAllUnmarked"
+                title="Select All"
+              />
+            </th>
             <th>Student</th>
             <th>Status</th>
             <th>Remarks</th>
@@ -342,6 +404,13 @@ function hasValidationErrors(): boolean {
         <tbody>
           <tr v-for="student in enrolledStudents" :key="student.id">
             <template v-if="bulkAttendances[student.id]">
+              <td>
+                <input 
+                  type="checkbox" 
+                  :checked="selectedStudentIds.has(student.id)" 
+                  @change="toggleStudentSelection(student.id)"
+                />
+              </td>
               <td>{{ student.nameLatin || student.nameKhmer || '-' }}</td>
               <td>
                 <select
@@ -461,5 +530,17 @@ function hasValidationErrors(): boolean {
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
+}
+
+.selected-actions {
+  background: #eef2ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #c7d2fe;
+}
+
+.selected-actions span {
+  color: #4338ca;
+  font-weight: 500;
 }
 </style>

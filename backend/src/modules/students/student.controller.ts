@@ -48,7 +48,7 @@ export class StudentController {
   @Roles('student')
   @Get('me')
   async getMyProfile(@Request() req) {
-    return this.studentService.findByUserId(req.user.id);
+    return this.studentService.findByUserId(req.user.sub);
   }
 
   @Roles('admin', 'teacher')

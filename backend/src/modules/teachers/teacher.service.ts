@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
@@ -8,6 +12,7 @@ import { UpdateTeacherDto } from './dto/update-teacher.dto';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/entities/user-role.entity';
 import { Role } from '../users/entities/role.entity';
+import { Course } from '../courses/entities/course.entity';
 
 @Injectable()
 export class TeacherService {
@@ -20,9 +25,34 @@ export class TeacherService {
     private userRoleRepo: Repository<UserRole>,
     @InjectRepository(Role)
     private roleRepo: Repository<Role>,
+    @InjectRepository(Course)
+    private courseRepo: Repository<Course>,
   ) {}
 
   async create(dto: CreateTeacherDto, imageFile?: string): Promise<Teacher> {
+    // Check for duplicate email
+    const existingEmail = await this.teacherRepo.findOne({
+      where: { personalEmail: dto.personalEmail },
+    });
+    if (existingEmail) {
+      throw new ConflictException(
+        `Teacher with email '${dto.personalEmail}' already exists`,
+      );
+    }
+
+    // Check for duplicate phone numbers
+    for (const phone of dto.phoneNumbers) {
+      const existingPhone = await this.teacherRepo
+        .createQueryBuilder('teacher')
+        .where(':phone = ANY(teacher.phoneNumbers)', { phone })
+        .getOne();
+      if (existingPhone) {
+        throw new ConflictException(
+          `Phone number '${phone}' is already registered to another teacher`,
+        );
+      }
+    }
+
     // Create user account for login
     const password = dto.password || 'teacher123'; // Default password
     const salt = await bcrypt.genSalt();
@@ -102,6 +132,34 @@ export class TeacherService {
   ): Promise<Teacher> {
     const teacher = await this.findOne(id);
 
+    // Check for duplicate email (excluding current teacher)
+    if (dto.personalEmail) {
+      const existingEmail = await this.teacherRepo.findOne({
+        where: { personalEmail: dto.personalEmail },
+      });
+      if (existingEmail && existingEmail.id !== id) {
+        throw new ConflictException(
+          `Teacher with email '${dto.personalEmail}' already exists`,
+        );
+      }
+    }
+
+    // Check for duplicate phone numbers (excluding current teacher)
+    if (dto.phoneNumbers) {
+      for (const phone of dto.phoneNumbers) {
+        const existingPhone = await this.teacherRepo
+          .createQueryBuilder('teacher')
+          .where(':phone = ANY(teacher.phoneNumbers)', { phone })
+          .andWhere('teacher.id != :id', { id })
+          .getOne();
+        if (existingPhone) {
+          throw new ConflictException(
+            `Phone number '${phone}' is already registered to another teacher`,
+          );
+        }
+      }
+    }
+
     // Update user email if provided
     if (dto.email && teacher.userId) {
       await this.userRepo.update(teacher.userId, { email: dto.email });
@@ -112,6 +170,22 @@ export class TeacherService {
       const salt = await bcrypt.genSalt();
       const passwordHash = await bcrypt.hash(dto.password, salt);
       await this.userRepo.update(teacher.userId, { passwordHash });
+    }
+
+    // Update user department if provided
+    if (dto.departmentId && teacher.userId) {
+      await this.userRepo.update(teacher.userId, {
+        departmentId: dto.departmentId,
+      });
+    }
+
+    // Update user name if provided
+    if (teacher.userId && (dto.nameKhmer || dto.nameLatin)) {
+      const userUpdateData: Partial<{ nameKhmer: string; nameLatin: string }> =
+        {};
+      if (dto.nameKhmer) userUpdateData.nameKhmer = dto.nameKhmer;
+      if (dto.nameLatin) userUpdateData.nameLatin = dto.nameLatin;
+      await this.userRepo.update(teacher.userId, userUpdateData);
     }
 
     // Update teacher record
@@ -132,6 +206,18 @@ export class TeacherService {
 
   async remove(id: number): Promise<void> {
     const teacher = await this.findOne(id);
+
+    // Check for course dependencies
+    if (teacher.userId) {
+      const coursesCount = await this.courseRepo.count({
+        where: { teacherId: teacher.userId },
+      });
+      if (coursesCount > 0) {
+        throw new ConflictException(
+          `Cannot delete teacher. Please remove the teacher from ${coursesCount} course(s) first.`,
+        );
+      }
+    }
 
     // Delete associated user account
     if (teacher.userId) {

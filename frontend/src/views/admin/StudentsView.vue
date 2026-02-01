@@ -25,6 +25,11 @@ const imagePreview = ref<string | null>(null)
 const showDeleteConfirm = ref(false)
 const deleteTargetId = ref<number | null>(null)
 
+// Bulk selection state
+const selectedStudentIds = ref<Set<number>>(new Set())
+const showBulkYearModal = ref(false)
+const bulkAcademicYear = ref<number>(1)
+
 // Filters
 const searchQuery = ref('')
 const filterGender = ref<string>('')
@@ -426,6 +431,57 @@ function getStatusClass(status: string) {
       return ''
   }
 }
+
+// Bulk selection helpers
+const isAllSelected = computed(() => {
+  return filteredStudents.value.length > 0 && 
+    filteredStudents.value.every(s => selectedStudentIds.value.has(s.id))
+})
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedStudentIds.value.clear()
+  } else {
+    filteredStudents.value.forEach(s => selectedStudentIds.value.add(s.id))
+  }
+}
+
+function toggleStudentSelection(studentId: number) {
+  if (selectedStudentIds.value.has(studentId)) {
+    selectedStudentIds.value.delete(studentId)
+  } else {
+    selectedStudentIds.value.add(studentId)
+  }
+}
+
+function openBulkYearModal() {
+  if (selectedStudentIds.value.size === 0) {
+    error.value = 'Please select at least one student'
+    return
+  }
+  bulkAcademicYear.value = 1
+  showBulkYearModal.value = true
+}
+
+async function submitBulkYearUpdate() {
+  if (selectedStudentIds.value.size === 0) return
+  
+  loading.value = true
+  error.value = ''
+  try {
+    const updatePromises = Array.from(selectedStudentIds.value).map(studentId => 
+      studentsService.update(studentId, { academicYear: bulkAcademicYear.value })
+    )
+    await Promise.all(updatePromises)
+    showBulkYearModal.value = false
+    selectedStudentIds.value.clear()
+    await loadData()
+  } catch (e) {
+    error.value = (e as Error).message
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
@@ -476,9 +532,28 @@ function getStatusClass(status: string) {
 
     <div v-if="loading" class="page-loading">Loading...</div>
 
+    <!-- Bulk Actions Bar -->
+    <div v-if="selectedStudentIds.size > 0" class="bulk-actions-bar">
+      <span>{{ selectedStudentIds.size }} student(s) selected</span>
+      <button class="btn btn-secondary" @click="openBulkYearModal">
+        Update Academic Year
+      </button>
+      <button class="btn btn-outline" @click="selectedStudentIds.clear()">
+        Clear Selection
+      </button>
+    </div>
+
     <table class="page-table" v-if="filteredStudents.length">
       <thead>
         <tr>
+          <th>
+            <input 
+              type="checkbox" 
+              :checked="isAllSelected" 
+              @change="toggleSelectAll"
+              title="Select All"
+            />
+          </th>
           <th>ID</th>
           <th>Photo</th>
           <th>Name (Latin)</th>
@@ -493,6 +568,13 @@ function getStatusClass(status: string) {
       </thead>
       <tbody>
         <tr v-for="student in filteredStudents" :key="student.id">
+          <td>
+            <input 
+              type="checkbox" 
+              :checked="selectedStudentIds.has(student.id)" 
+              @change="toggleStudentSelection(student.id)"
+            />
+          </td>
           <td>{{ student.id }}</td>
           <td>
             <img
@@ -536,6 +618,35 @@ function getStatusClass(status: string) {
       @confirm="confirmDelete"
       @cancel="cancelDelete"
     />
+
+    <!-- Bulk Academic Year Update Modal -->
+    <div v-if="showBulkYearModal" class="modal-overlay" @click.self="showBulkYearModal = false">
+      <div class="modal">
+        <h2>Update Academic Year</h2>
+        <p class="modal-subtitle">Update academic year for {{ selectedStudentIds.size }} selected student(s)</p>
+        
+        <form @submit.prevent="submitBulkYearUpdate">
+          <div class="form-group">
+            <label>New Academic Year *</label>
+            <input
+              v-model.number="bulkAcademicYear"
+              type="number"
+              min="1"
+              max="10"
+              required
+            />
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" @click="showBulkYearModal = false">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="loading">
+              Update {{ selectedStudentIds.size }} Student(s)
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -976,5 +1087,27 @@ function getStatusClass(status: string) {
 
 .form-group.has-error label {
   color: #dc3545;
+}
+
+/* Bulk actions bar */
+.bulk-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.bulk-actions-bar span {
+  font-weight: 500;
+  color: #4338ca;
+}
+
+.modal-subtitle {
+  color: #6b7280;
+  margin-bottom: 20px;
 }
 </style>

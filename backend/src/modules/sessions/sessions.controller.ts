@@ -87,6 +87,13 @@ export class SessionsController {
     return this.sessionsService.regenerateCode(id, req.user.sub, isAdmin);
   }
 
+  @Post('cleanup/expired')
+  @Roles('teacher', 'admin')
+  async closeExpired() {
+    const count = await this.sessionsService.closeExpiredSessions();
+    return { closedCount: count };
+  }
+
   @Delete(':id')
   @Roles('teacher', 'admin')
   async remove(@Param('id') id: string, @Req() req: RequestWithUser) {

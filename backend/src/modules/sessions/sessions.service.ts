@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -26,6 +26,13 @@ export class SessionsService {
     userId: number,
     isAdmin: boolean = false,
   ): Promise<Session> {
+    // Admin should not create sessions
+    if (isAdmin) {
+      throw new ForbiddenException(
+        'Administrators cannot create sessions. Only teachers can create sessions for their courses.',
+      );
+    }
+
     // Verify the course exists
     const course = await this.courseRepo.findOne({
       where: { id: dto.courseId },
@@ -35,24 +42,59 @@ export class SessionsService {
       throw new NotFoundException('Course not found');
     }
 
-    // Only the course teacher can create sessions (unless admin)
-    if (!isAdmin && course.teacherId !== userId) {
+    // Only the course teacher can create sessions
+    if (course.teacherId !== userId) {
       throw new ForbiddenException(
         'Only the course teacher can create sessions for this course',
       );
     }
 
+    // Check for duplicate title in the same course
+    const existingTitle = await this.sessionRepo.findOne({
+      where: { courseId: dto.courseId, title: dto.title.trim() },
+    });
+    if (existingTitle) {
+      throw new ConflictException(
+        `A session with title '${dto.title}' already exists for this course`,
+      );
+    }
+
+    // Check for time overlap with existing sessions in the same course
+    const startTime = new Date(dto.startTime);
+    const endTime = new Date(dto.endTime);
+
+    const overlappingSession = await this.sessionRepo
+      .createQueryBuilder('session')
+      .where('session.courseId = :courseId', { courseId: dto.courseId })
+      .andWhere(
+        '((session.startTime <= :startTime AND session.endTime > :startTime) OR ' +
+          '(session.startTime < :endTime AND session.endTime >= :endTime) OR ' +
+          '(session.startTime >= :startTime AND session.endTime <= :endTime))',
+        { startTime, endTime },
+      )
+      .getOne();
+
+    if (overlappingSession) {
+      throw new ConflictException(
+        `Session time overlaps with existing session '${overlappingSession.title}'`,
+      );
+    }
+
     const session = this.sessionRepo.create({
       ...dto,
+      title: dto.title.trim(),
       createdById: userId,
-      startTime: new Date(dto.startTime),
-      endTime: new Date(dto.endTime),
+      startTime,
+      endTime,
     });
 
     return this.sessionRepo.save(session);
   }
 
   async findAll(userId: number, isAdmin: boolean): Promise<Session[]> {
+    // Auto-close any expired sessions before returning
+    await this.closeExpiredSessions();
+
     if (isAdmin) {
       return this.sessionRepo.find({
         relations: ['course', 'createdBy'],
@@ -82,6 +124,9 @@ export class SessionsService {
   }
 
   async findByCourse(courseId: string): Promise<Session[]> {
+    // Auto-close any expired sessions before returning
+    await this.closeExpiredSessions();
+
     return this.sessionRepo.find({
       where: { courseId },
       relations: ['course', 'createdBy'],
@@ -149,6 +194,17 @@ export class SessionsService {
       throw new ForbiddenException('Unauthorized');
     }
 
+    // Check if current time is within session start and end time
+    const now = new Date();
+    const startTime = new Date(session.startTime);
+    const endTime = new Date(session.endTime);
+
+    if (now < startTime || now > endTime) {
+      throw new BadRequestException(
+        `Cannot activate session outside of scheduled time. Session is scheduled from ${startTime.toLocaleString()} to ${endTime.toLocaleString()}`,
+      );
+    }
+
     session.status = SessionStatus.ACTIVE;
     session.isCodeActive = true;
     return this.sessionRepo.save(session);
@@ -200,5 +256,22 @@ export class SessionsService {
     }
 
     await this.sessionRepo.delete(id);
+  }
+
+  // Auto-close expired sessions (can be called from a controller endpoint or scheduled task)
+  async closeExpiredSessions(): Promise<number> {
+    const now = new Date();
+    const result = await this.sessionRepo
+      .createQueryBuilder()
+      .update(Session)
+      .set({
+        status: SessionStatus.COMPLETED,
+        isCodeActive: false,
+      })
+      .where('status = :status', { status: SessionStatus.ACTIVE })
+      .andWhere('endTime < :now', { now })
+      .execute();
+
+    return result.affected || 0;
   }
 }
