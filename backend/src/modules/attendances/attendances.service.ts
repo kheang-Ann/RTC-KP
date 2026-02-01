@@ -6,7 +6,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import {
   Attendance,
   AttendanceStatus,
@@ -76,7 +76,9 @@ export class AttendancesService {
     });
 
     if (!schedule) {
-      throw new ForbiddenException('Your group does not have this course scheduled');
+      throw new ForbiddenException(
+        'Your group does not have this course scheduled',
+      );
     }
 
     // Check if already checked in
@@ -133,11 +135,26 @@ export class AttendancesService {
       );
     }
 
+    // Lookup the student to get their userId (studentId in DTO is the Student entity ID)
+    const student = await this.studentRepo.findOne({
+      where: { id: dto.studentId },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    if (!student.userId) {
+      throw new BadRequestException('Student does not have a user account');
+    }
+
+    const studentUserId = student.userId;
+
     // Check if attendance already exists
     let attendance = await this.attendanceRepo.findOne({
       where: {
         sessionId: dto.sessionId,
-        studentId: dto.studentId,
+        studentId: studentUserId,
       },
     });
 
@@ -151,7 +168,7 @@ export class AttendancesService {
       // Create new
       attendance = this.attendanceRepo.create({
         sessionId: dto.sessionId,
-        studentId: dto.studentId,
+        studentId: studentUserId,
         status: dto.status,
         checkInMethod: CheckInMethod.MANUAL,
         checkInTime: new Date(),
@@ -184,13 +201,32 @@ export class AttendancesService {
       );
     }
 
+    // Lookup all students to get their userIds
+    const studentIds = dto.attendances.map((a) => a.studentId);
+    const students = await this.studentRepo.find({
+      where: { id: In(studentIds) },
+    });
+
+    const studentIdToUserIdMap = new Map<number, number>();
+    for (const student of students) {
+      if (student.userId) {
+        studentIdToUserIdMap.set(student.id, student.userId);
+      }
+    }
+
     const results: Attendance[] = [];
 
     for (const item of dto.attendances) {
+      const studentUserId = studentIdToUserIdMap.get(item.studentId);
+      if (!studentUserId) {
+        // Skip students without user accounts
+        continue;
+      }
+
       let attendance = await this.attendanceRepo.findOne({
         where: {
           sessionId: dto.sessionId,
-          studentId: item.studentId,
+          studentId: studentUserId,
         },
       });
 
@@ -202,7 +238,7 @@ export class AttendancesService {
       } else {
         attendance = this.attendanceRepo.create({
           sessionId: dto.sessionId,
-          studentId: item.studentId,
+          studentId: studentUserId,
           status: item.status,
           checkInMethod: CheckInMethod.MANUAL,
           checkInTime: new Date(),
@@ -234,7 +270,8 @@ export class AttendancesService {
   }
 
   async findByStudentUserId(userId: number): Promise<Attendance[]> {
-    // First find the student by their userId
+    // The attendance.studentId field stores the userId directly
+    // Just verify the student exists first
     const student = await this.studentRepo.findOne({
       where: { userId },
     });
@@ -243,14 +280,15 @@ export class AttendancesService {
       return [];
     }
 
-    return this.findByStudent(student.id);
+    // Query by userId since that's what's stored in attendance.studentId
+    return this.findByStudent(userId);
   }
 
   async findByStudentUserIdAndCourse(
     userId: number,
     courseId: string,
   ): Promise<Attendance[]> {
-    // First find the student by their userId
+    // Verify the student exists
     const student = await this.studentRepo.findOne({
       where: { userId },
     });
@@ -259,7 +297,8 @@ export class AttendancesService {
       return [];
     }
 
-    return this.findByStudentAndCourse(student.id, courseId);
+    // Query by userId since that's what's stored in attendance.studentId
+    return this.findByStudentAndCourse(userId, courseId);
   }
 
   async findByStudentAndCourse(
