@@ -265,7 +265,7 @@ function formatDate(dateStr: string) {
             <tbody>
               <tr v-for="att in studentAttendance" :key="att.id">
                 <td>{{ formatDate(att.checkInTime || '') }}</td>
-                <td>{{ att.session?.courseId || '-' }}</td>
+                <td>{{ att.session?.course?.name || att.session?.course?.code || '-' }}</td>
                 <td>
                   <span class="status-badge" :class="getStatusClass(att.status)">
                     {{ att.status }}

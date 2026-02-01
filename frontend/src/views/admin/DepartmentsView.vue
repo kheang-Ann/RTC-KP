@@ -9,6 +9,7 @@ const error = ref('')
 const showModal = ref(false)
 const showDeleteConfirm = ref(false)
 const deleteTargetId = ref<number | null>(null)
+const modalError = ref('')
 
 const form = ref<CreateDepartmentDto>({
   name: '',
@@ -32,18 +33,19 @@ async function loadData() {
 
 function openCreate() {
   form.value = { name: ''}
+  modalError.value = ''
   showModal.value = true
 }
 
 async function createDepartment() {
   loading.value = true
-  error.value = ''
+  modalError.value = ''
   try {
     await departmentsService.create(form.value)
     showModal.value = false
     await loadData()
   } catch (e) {
-    error.value = (e as Error).message
+    modalError.value = (e as Error).message
   } finally {
     loading.value = false
   }
@@ -110,6 +112,7 @@ function cancelDelete() {
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal">
         <h2>Create Department</h2>
+        <div v-if="modalError" class="page-alert page-alert-error">{{ modalError }}</div>
         <form @submit.prevent="createDepartment">
           <div class="form-group">
             <label>Department Name</label>

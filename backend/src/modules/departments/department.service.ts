@@ -13,16 +13,19 @@ export class DepartmentService {
   private departmentRepo: Repository<Department>;
 
   async Create(dto: Partial<Department>) {
-    // Check for duplicate name
+    // Check for duplicate name (case-insensitive)
     if (dto.name) {
-      const existing = await this.departmentRepo.findOne({
-        where: { name: dto.name.trim() },
-      });
+      const trimmedName = dto.name.trim();
+      const existing = await this.departmentRepo
+        .createQueryBuilder('department')
+        .where('LOWER(department.name) = LOWER(:name)', { name: trimmedName })
+        .getOne();
       if (existing) {
         throw new ConflictException(
-          `Department with name '${dto.name}' already exists`,
+          `Department with name '${trimmedName}' already exists`,
         );
       }
+      dto.name = trimmedName;
     }
     const newDepartment = this.departmentRepo.create(dto);
     return this.departmentRepo.save(newDepartment);
@@ -57,16 +60,20 @@ export class DepartmentService {
     if (!department) {
       throw new NotFoundException(`Department with id ${id} not found`);
     }
-    // Check for duplicate name (excluding current department)
+    // Check for duplicate name (case-insensitive, excluding current department)
     if (dto.name) {
-      const existing = await this.departmentRepo.findOne({
-        where: { name: dto.name.trim(), id: Not(id) },
-      });
+      const trimmedName = dto.name.trim();
+      const existing = await this.departmentRepo
+        .createQueryBuilder('department')
+        .where('LOWER(department.name) = LOWER(:name)', { name: trimmedName })
+        .andWhere('department.id != :id', { id })
+        .getOne();
       if (existing) {
         throw new ConflictException(
-          `Department with name '${dto.name}' already exists`,
+          `Department with name '${trimmedName}' already exists`,
         );
       }
+      dto.name = trimmedName;
     }
     Object.assign(department, dto);
     return this.departmentRepo.save(department);

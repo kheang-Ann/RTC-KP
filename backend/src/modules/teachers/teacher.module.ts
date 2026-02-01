@@ -7,10 +7,11 @@ import { TeacherService } from './teacher.service';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/entities/user-role.entity';
 import { Role } from '../users/entities/role.entity';
+import { Course } from '../courses/entities/course.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Teacher, User, UserRole, Role]),
+    TypeOrmModule.forFeature([Teacher, User, UserRole, Role, Course]),
     MulterModule.register({
       dest: './uploads/teachers',
     }),

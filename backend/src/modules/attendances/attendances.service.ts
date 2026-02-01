@@ -233,6 +233,35 @@ export class AttendancesService {
     });
   }
 
+  async findByStudentUserId(userId: number): Promise<Attendance[]> {
+    // First find the student by their userId
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+    });
+
+    if (!student) {
+      return [];
+    }
+
+    return this.findByStudent(student.id);
+  }
+
+  async findByStudentUserIdAndCourse(
+    userId: number,
+    courseId: string,
+  ): Promise<Attendance[]> {
+    // First find the student by their userId
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+    });
+
+    if (!student) {
+      return [];
+    }
+
+    return this.findByStudentAndCourse(student.id, courseId);
+  }
+
   async findByStudentAndCourse(
     studentId: number,
     courseId: string,

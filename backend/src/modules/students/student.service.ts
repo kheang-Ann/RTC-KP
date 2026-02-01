@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -48,6 +49,29 @@ export class StudentService {
   async create(dto: CreateStudentDto, imageFile?: string): Promise<Student> {
     // Validate age
     this.validateAge(dto.dob);
+
+    // Check for duplicate email
+    const existingEmail = await this.studentRepo.findOne({
+      where: { personalEmail: dto.personalEmail },
+    });
+    if (existingEmail) {
+      throw new ConflictException(
+        `Student with email '${dto.personalEmail}' already exists`,
+      );
+    }
+
+    // Check for duplicate phone numbers
+    for (const phone of dto.phoneNumbers) {
+      const existingPhone = await this.studentRepo
+        .createQueryBuilder('student')
+        .where(':phone = ANY(student.phoneNumbers)', { phone })
+        .getOne();
+      if (existingPhone) {
+        throw new ConflictException(
+          `Phone number '${phone}' is already registered to another student`,
+        );
+      }
+    }
 
     // Create user account for login
     const password = dto.password || 'student123'; // Default password
@@ -137,6 +161,34 @@ export class StudentService {
       this.validateAge(dto.dob);
     }
 
+    // Check for duplicate email (excluding current student)
+    if (dto.personalEmail) {
+      const existingEmail = await this.studentRepo.findOne({
+        where: { personalEmail: dto.personalEmail },
+      });
+      if (existingEmail && existingEmail.id !== id) {
+        throw new ConflictException(
+          `Student with email '${dto.personalEmail}' already exists`,
+        );
+      }
+    }
+
+    // Check for duplicate phone numbers (excluding current student)
+    if (dto.phoneNumbers) {
+      for (const phone of dto.phoneNumbers) {
+        const existingPhone = await this.studentRepo
+          .createQueryBuilder('student')
+          .where(':phone = ANY(student.phoneNumbers)', { phone })
+          .andWhere('student.id != :id', { id })
+          .getOne();
+        if (existingPhone) {
+          throw new ConflictException(
+            `Phone number '${phone}' is already registered to another student`,
+          );
+        }
+      }
+    }
+
     // Validate academic year against program duration
     if (dto.academicYear && dto.programId) {
       const program = await this.programRepo.findOne({
@@ -179,6 +231,22 @@ export class StudentService {
       const salt = await bcrypt.genSalt();
       const passwordHash = await bcrypt.hash(dto.password, salt);
       await this.userRepo.update(student.userId, { passwordHash });
+    }
+
+    // Update user department if provided
+    if (dto.departmentId && student.userId) {
+      await this.userRepo.update(student.userId, {
+        departmentId: dto.departmentId,
+      });
+    }
+
+    // Update user name if provided
+    if (student.userId && (dto.nameKhmer || dto.nameLatin)) {
+      const userUpdateData: Partial<{ nameKhmer: string; nameLatin: string }> =
+        {};
+      if (dto.nameKhmer) userUpdateData.nameKhmer = dto.nameKhmer;
+      if (dto.nameLatin) userUpdateData.nameLatin = dto.nameLatin;
+      await this.userRepo.update(student.userId, userUpdateData);
     }
 
     // Update student record

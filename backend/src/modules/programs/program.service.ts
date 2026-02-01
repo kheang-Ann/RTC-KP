@@ -17,16 +17,18 @@ export class ProgramService {
   ) {}
 
   async create(dto: CreateProgramDto): Promise<Program> {
-    // Check for duplicate name
-    const existing = await this.programRepo.findOne({
-      where: { name: dto.name.trim() },
-    });
+    // Check for duplicate name (case-insensitive)
+    const trimmedName = dto.name.trim();
+    const existing = await this.programRepo
+      .createQueryBuilder('program')
+      .where('LOWER(program.name) = LOWER(:name)', { name: trimmedName })
+      .getOne();
     if (existing) {
       throw new ConflictException(
-        `Program with name '${dto.name}' already exists`,
+        `Program with name '${trimmedName}' already exists`,
       );
     }
-    const program = this.programRepo.create(dto);
+    const program = this.programRepo.create({ ...dto, name: trimmedName });
     return this.programRepo.save(program);
   }
 
@@ -58,16 +60,20 @@ export class ProgramService {
 
   async update(id: number, dto: UpdateProgramDto): Promise<Program> {
     const program = await this.findOne(id);
-    // Check for duplicate name (excluding current program)
+    // Check for duplicate name (case-insensitive, excluding current program)
     if (dto.name) {
-      const existing = await this.programRepo.findOne({
-        where: { name: dto.name.trim(), id: Not(id) },
-      });
+      const trimmedName = dto.name.trim();
+      const existing = await this.programRepo
+        .createQueryBuilder('program')
+        .where('LOWER(program.name) = LOWER(:name)', { name: trimmedName })
+        .andWhere('program.id != :id', { id })
+        .getOne();
       if (existing) {
         throw new ConflictException(
-          `Program with name '${dto.name}' already exists`,
+          `Program with name '${trimmedName}' already exists`,
         );
       }
+      dto.name = trimmedName;
     }
     Object.assign(program, dto);
     return this.programRepo.save(program);
