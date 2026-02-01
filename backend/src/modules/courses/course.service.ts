@@ -2,16 +2,25 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { Course } from './entities/course.entity';
+import { Schedule } from '../schedules/entities/schedule.entity';
+import { Session } from '../sessions/entities/session.entity';
 @Injectable()
 export class CourseService {
-  @InjectRepository(Course)
-  private courseRepo: Repository<Course>;
+  constructor(
+    @InjectRepository(Course)
+    private courseRepo: Repository<Course>,
+    @InjectRepository(Schedule)
+    private scheduleRepo: Repository<Schedule>,
+    @InjectRepository(Session)
+    private sessionRepo: Repository<Session>,
+  ) {}
 
   async findAll(): Promise<Course[]> {
     return this.courseRepo.find({
@@ -67,7 +76,31 @@ export class CourseService {
   }
 
   async remove(id: string): Promise<void> {
-    const res = await this.courseRepo.delete(id);
-    if (res.affected === 0) throw new NotFoundException('Course not found');
+    const course = await this.courseRepo.findOne({ where: { id } });
+    if (!course) {
+      throw new NotFoundException('Course not found');
+    }
+
+    // Check for related schedules
+    const schedulesCount = await this.scheduleRepo.count({
+      where: { courseId: id },
+    });
+    if (schedulesCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete course. Please remove ${schedulesCount} schedule(s) first.`,
+      );
+    }
+
+    // Check for related sessions
+    const sessionsCount = await this.sessionRepo.count({
+      where: { courseId: id },
+    });
+    if (sessionsCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete course. Please remove ${sessionsCount} session(s) first.`,
+      );
+    }
+
+    await this.courseRepo.delete(id);
   }
 }

@@ -2,18 +2,25 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Program } from './entities/program.entity';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
+import { Student } from '../students/entities/student.entity';
+import { Group } from '../groups/entities/group.entity';
 
 @Injectable()
 export class ProgramService {
   constructor(
     @InjectRepository(Program)
     private programRepo: Repository<Program>,
+    @InjectRepository(Student)
+    private studentRepo: Repository<Student>,
+    @InjectRepository(Group)
+    private groupRepo: Repository<Group>,
   ) {}
 
   async create(dto: CreateProgramDto): Promise<Program> {
@@ -92,9 +99,31 @@ export class ProgramService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.programRepo.delete(id);
-    if (result.affected === 0) {
+    const program = await this.programRepo.findOne({ where: { id } });
+    if (!program) {
       throw new NotFoundException(`Program with ID ${id} not found`);
     }
+
+    // Check for related students
+    const studentsCount = await this.studentRepo.count({
+      where: { programId: id },
+    });
+    if (studentsCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete program. Please remove ${studentsCount} student(s) first.`,
+      );
+    }
+
+    // Check for related groups
+    const groupsCount = await this.groupRepo.count({
+      where: { programId: id },
+    });
+    if (groupsCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete program. Please remove ${groupsCount} group(s) first.`,
+      );
+    }
+
+    await this.programRepo.delete(id);
   }
 }

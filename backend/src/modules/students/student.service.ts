@@ -14,6 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/entities/user-role.entity';
 import { Role } from '../users/entities/role.entity';
 import { Program } from '../programs/entities/program.entity';
+import { LeaveRequest } from '../leave-requests/entities/leave-request.entity';
 
 @Injectable()
 export class StudentService {
@@ -28,6 +29,8 @@ export class StudentService {
     private roleRepo: Repository<Role>,
     @InjectRepository(Program)
     private programRepo: Repository<Program>,
+    @InjectRepository(LeaveRequest)
+    private leaveRequestRepo: Repository<LeaveRequest>,
   ) {}
 
   private validateAge(dob: string): void {
@@ -163,6 +166,7 @@ export class StudentService {
     dto: UpdateStudentDto,
     imageFile?: string,
   ): Promise<Student> {
+    console.log('Update student DTO:', JSON.stringify(dto, null, 2));
     const student = await this.findOne(id);
 
     // Validate age if dob is being updated
@@ -207,7 +211,7 @@ export class StudentService {
     }
 
     // Validate academic year against program duration
-    if (dto.academicYear && dto.programId) {
+    if (dto.academicYear !== undefined && dto.programId !== undefined) {
       const program = await this.programRepo.findOne({
         where: { id: dto.programId },
       });
@@ -216,13 +220,26 @@ export class StudentService {
           `Academic year cannot exceed program duration (${program.duration} years)`,
         );
       }
-    } else if (dto.academicYear) {
+    } else if (dto.academicYear !== undefined) {
+      // Use existing program or new program if provided
+      const programId =
+        dto.programId !== undefined ? dto.programId : student.programId;
       const program = await this.programRepo.findOne({
-        where: { id: student.programId },
+        where: { id: programId },
       });
       if (program && dto.academicYear > program.duration) {
         throw new BadRequestException(
           `Academic year cannot exceed program duration (${program.duration} years)`,
+        );
+      }
+    } else if (dto.programId !== undefined) {
+      // Changing program - validate current academic year against new program
+      const program = await this.programRepo.findOne({
+        where: { id: dto.programId },
+      });
+      if (program && student.academicYear > program.duration) {
+        throw new BadRequestException(
+          `Current academic year (${student.academicYear}) exceeds new program duration (${program.duration} years). Please reduce the academic year first.`,
         );
       }
     }
@@ -273,15 +290,28 @@ export class StudentService {
     if (dto.nameLatin) updateData.nameLatin = dto.nameLatin;
     if (dto.gender) updateData.gender = dto.gender;
     if (dto.dob) updateData.dob = new Date(dto.dob);
-    if (dto.departmentId) updateData.departmentId = dto.departmentId;
-    if (dto.programId) updateData.programId = dto.programId;
+    if (dto.departmentId !== undefined)
+      updateData.departmentId = dto.departmentId;
+    if (dto.programId !== undefined) updateData.programId = dto.programId;
     if (dto.academicStatus) updateData.academicStatus = dto.academicStatus;
-    if (dto.academicYear) updateData.academicYear = dto.academicYear;
+    if (dto.academicYear !== undefined)
+      updateData.academicYear = dto.academicYear;
     if (dto.personalEmail) updateData.personalEmail = dto.personalEmail;
     if (dto.phoneNumbers) updateData.phoneNumbers = dto.phoneNumbers;
     if (dto.emergencyPhoneNumbers)
       updateData.emergencyPhoneNumbers = dto.emergencyPhoneNumbers;
     if (imageFile) updateData.image = imageFile;
+
+    // Clear relation objects to ensure FK updates work correctly
+    // TypeORM uses relation objects over FK columns when both are present
+    if (dto.departmentId !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      (student as any).department = undefined;
+    }
+    if (dto.programId !== undefined) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      (student as any).program = undefined;
+    }
 
     Object.assign(student, updateData);
     return this.studentRepo.save(student);
@@ -289,6 +319,16 @@ export class StudentService {
 
   async remove(id: number): Promise<void> {
     const student = await this.findOne(id);
+
+    // Check for related leave requests
+    const leaveRequestsCount = await this.leaveRequestRepo.count({
+      where: { studentId: id },
+    });
+    if (leaveRequestsCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete student. Please delete ${leaveRequestsCount} leave request(s) first.`,
+      );
+    }
 
     // Delete associated user account
     if (student.userId) {
