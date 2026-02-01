@@ -82,17 +82,17 @@ function formatDateTime(dateStr: string) {
 </script>
 
 <template>
-  <div class="teacher-dashboard">
-    <h1>Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
-    <p class="subtitle">Teacher Dashboard</p>
+  <div class="page-container">
+    <h1 class="page-title">Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
+    <p class="page-subtitle">Teacher Dashboard</p>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <template v-else>
       <!-- Stats Cards -->
-      <div class="stats-grid">
+      <div class="page-stats-grid">
         <div class="stat-card border-left-blue">
           <div class="stat-value">{{ stats.totalCourses }}</div>
           <div class="stat-label">My Courses</div>
@@ -116,8 +116,8 @@ function formatDateTime(dateStr: string) {
       </div>
 
       <!-- Quick Actions -->
-      <div class="section">
-        <h2>Quick Actions</h2>
+      <div class="page-section">
+        <h2 class="section-title">Quick Actions</h2>
         <div class="quick-actions">
           <router-link to="/teacher/sessions" class="action-card">
             <span class="action-icon">📅</span>
@@ -139,8 +139,8 @@ function formatDateTime(dateStr: string) {
       </div>
 
       <!-- Today's Sessions -->
-      <div class="section">
-        <h2>Today's Sessions</h2>
+      <div class="page-section">
+        <h2 class="section-title">Today's Sessions</h2>
         <div v-if="todaySessions.length" class="sessions-list">
           <div v-for="session in todaySessions" :key="session.id" class="session-card">
             <div class="session-info">
@@ -158,12 +158,12 @@ function formatDateTime(dateStr: string) {
             </div>
           </div>
         </div>
-        <div v-else class="empty">No sessions scheduled for today.</div>
+        <div v-else class="page-empty">No sessions scheduled for today.</div>
       </div>
 
       <!-- My Courses -->
-      <div class="section">
-        <h2>My Courses</h2>
+      <div class="page-section">
+        <h2 class="section-title">My Courses</h2>
         <div v-if="courses.length" class="courses-grid">
           <div v-for="course in courses" :key="course.id" class="course-card">
             <div class="course-code">{{ course.code || course.name }}</div>
@@ -171,13 +171,13 @@ function formatDateTime(dateStr: string) {
             <div class="course-credits">{{ course.credits }} credits</div>
           </div>
         </div>
-        <div v-else class="empty">No courses assigned yet.</div>
+        <div v-else class="page-empty">No courses assigned yet.</div>
       </div>
 
       <!-- Recent Sessions -->
-      <div class="section">
-        <h2>Recent Sessions</h2>
-        <table v-if="recentSessions.length" class="table">
+      <div class="page-section">
+        <h2 class="section-title">Recent Sessions</h2>
+        <table v-if="recentSessions.length" class="page-table">
           <thead>
             <tr>
               <th>Session</th>
@@ -199,63 +199,14 @@ function formatDateTime(dateStr: string) {
             </tr>
           </tbody>
         </table>
-        <div v-else class="empty">No sessions yet.</div>
+        <div v-else class="page-empty">No sessions yet.</div>
       </div>
     </template>
   </div>
 </template>
 
 <style scoped>
-.teacher-dashboard {
-  padding: 1rem;
-}
-
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  color: var(--color-grey);
-  margin-bottom: 1.5rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: var(--color-dark-grey);
-}
-
-.stat-label {
-  color: var(--color-grey);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.section {
-  margin-bottom: 2rem;
-}
-
-.section h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: var(--color-dark-grey)
-}
-
+/* View-specific styles */
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -351,7 +302,7 @@ h1 {
 .course-code {
   font-size: 1.25rem;
   font-weight: bold;
-  color: var(--color-purple);
+  color: var(--color-primary);
 }
 
 .course-name {
@@ -363,27 +314,6 @@ h1 {
   color: #888;
   font-size: 0.875rem;
   margin-top: 0.5rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
 }
 
 .status-badge {
@@ -412,26 +342,5 @@ h1 {
 .status-cancelled {
   background: #ffebee;
   color: #c62828;
-}
-
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: #ffebee;
-  color: #c62828;
-  border: 1px solid #ffcdd2;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
 }
 </style>

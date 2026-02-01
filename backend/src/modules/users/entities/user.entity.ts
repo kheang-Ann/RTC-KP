@@ -12,7 +12,6 @@ import { Exclude, Transform } from 'class-transformer';
 import { UserRole } from './user-role.entity';
 import { RefreshToken } from './refresh-toke.entity';
 import { Department } from 'src/modules/departments/entity/department.entity';
-import { Enrollment } from 'src/modules/enrollments/entities/enrollment.entity';
 
 @Entity('users')
 export class User {
@@ -55,10 +54,6 @@ export class User {
   })
   @JoinColumn({ name: 'departmentId' })
   department: Department;
-
-  @OneToMany(() => Enrollment, (enrollment) => enrollment.student)
-  @Exclude()
-  enrollments: Enrollment[];
 
   @CreateDateColumn()
   createdAt: Date;

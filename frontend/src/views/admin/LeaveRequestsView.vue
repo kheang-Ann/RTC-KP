@@ -217,16 +217,16 @@ function formatDateTime(dateStr: string) {
 </script>
 
 <template>
-  <div class="leave-requests-view">
-    <div class="header">
-      <h1>Leave Requests Management</h1>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">Leave Requests Management</h1>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="successMessage" class="page-alert page-alert-success">{{ successMessage }}</div>
 
     <!-- Stats -->
-    <div class="stats-grid">
+    <div class="page-stats-grid">
       <div class="stat-card">
         <div class="stat-value">{{ stats.total }}</div>
         <div class="stat-label">Total</div>
@@ -246,7 +246,7 @@ function formatDateTime(dateStr: string) {
     </div>
 
     <!-- Filters -->
-    <div class="filters">
+    <div class="page-filters">
       <div class="filter-group">
         <label>Type</label>
         <select v-model="selectedRequesterType">
@@ -266,10 +266,10 @@ function formatDateTime(dateStr: string) {
       </div>
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <template v-else>
-      <table v-if="filteredRequests.length" class="table">
+      <table v-if="filteredRequests.length" class="page-table">
         <thead>
           <tr>
             <th>Requester</th>
@@ -319,7 +319,7 @@ function formatDateTime(dateStr: string) {
         </tbody>
       </table>
 
-      <div v-else class="empty">No leave requests found.</div>
+      <div v-else class="page-empty">No leave requests found.</div>
     </template>
 
     <!-- View Details Modal -->
@@ -330,7 +330,7 @@ function formatDateTime(dateStr: string) {
           <button class="close-btn" @click="showViewModal = false">&times;</button>
         </div>
 
-        <div v-if="loadingDetails" class="loading">Loading details...</div>
+        <div v-if="loadingDetails" class="page-loading">Loading details...</div>
 
         <template v-else-if="viewingDetails">
           <!-- Contact Details -->
@@ -455,7 +455,7 @@ function formatDateTime(dateStr: string) {
             ></textarea>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showRejectModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showRejectModal = false">Cancel</button>
             <button type="submit" class="btn btn-danger" :disabled="loading || !rejectReason.trim()">
               Reject Request
             </button>
@@ -509,7 +509,7 @@ function formatDateTime(dateStr: string) {
             ></textarea>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showReviewModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showReviewModal = false">Cancel</button>
             <button
               type="submit"
               class="btn"
@@ -526,25 +526,7 @@ function formatDateTime(dateStr: string) {
 </template>
 
 <style scoped>
-.leave-requests-view {
-  padding: 1rem;
-}
-
-.header {
-  margin-bottom: 1.5rem;
-}
-
-.header h1 {
-  margin: 0;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
+/* Stats card specific styles */
 .stat-card {
   background: white;
   border-radius: 8px;
@@ -567,60 +549,7 @@ function formatDateTime(dateStr: string) {
   border-left: 4px solid #22c55e;
 }
 
-.filters {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.filter-group label {
-  font-size: 0.875rem;
-  color: var(--color-grey);
-}
-
-.filter-group select {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 150px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.table td {
-  font-size: 0.875rem;
-}
-
-.table tr:hover {
-  background: #fafafa;
-}
-
+/* Requester info */
 .requester-name {
   font-weight: 500;
 }
@@ -631,6 +560,7 @@ function formatDateTime(dateStr: string) {
   text-transform: capitalize;
 }
 
+/* Type badge */
 .type-badge {
   padding: 0.125rem 0.5rem;
   border-radius: 4px;
@@ -652,6 +582,7 @@ function formatDateTime(dateStr: string) {
   white-space: nowrap;
 }
 
+/* Status badges */
 .status-badge {
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
@@ -675,94 +606,14 @@ function formatDateTime(dateStr: string) {
   color: #991b1b;
 }
 
+/* Actions */
 .actions {
   display: flex;
   gap: 0.25rem;
   flex-wrap: wrap;
 }
 
-.btn {
-  padding: 0.375rem 0.75rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  transition: background-color 0.2s;
-  background: #e5e7eb;
-}
-
-.btn-sm {
-  padding: 0.25rem 0.5rem;
-}
-
-.btn-success {
-  background: #22c55e;
-  color: white;
-}
-
-.btn-success:hover {
-  background: #16a34a;
-}
-
-.btn-primary {
-  background: #6366f1;
-  color: white;
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.btn-outline {
-  background: white;
-  border: 1px solid #ddd;
-  color: var(--color-dark-grey);
-}
-
-.btn-outline:hover {
-  background: #f5f5f5;
-}
-
-.btn-outline-danger {
-  background: white;
-  border: 1px solid #fca5a5;
-  color: #dc2626;
-}
-
-.btn-outline-danger:hover {
-  background: #fee2e2;
-}
-
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.alert-success {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -814,6 +665,14 @@ function formatDateTime(dateStr: string) {
   color: var(--color-dark-grey);
 }
 
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Detail sections */
 .detail-section {
   margin-bottom: 1.5rem;
 }
@@ -853,7 +712,7 @@ function formatDateTime(dateStr: string) {
 }
 
 .document-link {
-  color: var(--color-purple);
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -861,6 +720,7 @@ function formatDateTime(dateStr: string) {
   text-decoration: underline;
 }
 
+/* Review/Reject info */
 .review-details,
 .reject-info {
   background: #f9f9f9;
@@ -875,6 +735,7 @@ function formatDateTime(dateStr: string) {
   font-size: 0.875rem;
 }
 
+/* Form styles */
 .form-group {
   margin-bottom: 1rem;
 }
@@ -894,6 +755,7 @@ function formatDateTime(dateStr: string) {
   resize: vertical;
 }
 
+/* Decision buttons */
 .decision-buttons {
   display: flex;
   gap: 0.5rem;
@@ -924,12 +786,5 @@ function formatDateTime(dateStr: string) {
   border-color: var(--color-light-red);
   background: #fee2e2;
   color: #991b1b;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
 }
 </style>

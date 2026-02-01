@@ -6,6 +6,7 @@ import {
   type CreateLeaveRequestDto,
   type LeaveType,
 } from '@/services/leave-requests'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const leaveRequests = ref<LeaveRequest[]>([])
 const loading = ref(false)
@@ -13,6 +14,8 @@ const error = ref('')
 const successMessage = ref('')
 const showModal = ref(false)
 const documentFile = ref<File | null>(null)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref<string | null>(null)
 
 const leaveTypes: { value: LeaveType; label: string }[] = [
   { value: 'sick', label: 'Sick Leave' },
@@ -107,13 +110,19 @@ async function submitRequest() {
   }
 }
 
-async function cancelRequest(id: string) {
-  if (!confirm('Are you sure you want to cancel this leave request?')) return
+function cancelRequest(id: string) {
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTargetId.value === null) return
+  showDeleteConfirm.value = false
 
   loading.value = true
   error.value = ''
   try {
-    await leaveRequestsService.delete(id)
+    await leaveRequestsService.delete(deleteTargetId.value)
     successMessage.value = 'Leave request cancelled!'
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
@@ -121,7 +130,13 @@ async function cancelRequest(id: string) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    deleteTargetId.value = null
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
 }
 
 function getStatusClass(status: string) {
@@ -163,21 +178,21 @@ function formatDateTime(dateStr: string) {
 </script>
 
 <template>
-  <div class="leave-requests-view">
-    <div class="header">
-      <h1>Leave Requests</h1>
+  <div class="page-container">
+    <div class="page-header-row">
+      <h1 class="page-title">Leave Requests</h1>
       <button class="btn btn-primary" @click="openModal">+ New Request</button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="successMessage" class="page-alert page-alert-success">{{ successMessage }}</div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <template v-else>
       <!-- Pending Requests -->
-      <div class="section">
-        <h2>Pending Requests ({{ pendingRequests.length }})</h2>
+      <div class="page-section">
+        <h2 class="section-title">Pending Requests ({{ pendingRequests.length }})</h2>
         <div v-if="pendingRequests.length" class="requests-list">
           <div v-for="request in pendingRequests" :key="request.id" class="request-card pending">
             <div class="request-info">
@@ -198,12 +213,12 @@ function formatDateTime(dateStr: string) {
             </div>
           </div>
         </div>
-        <div v-else class="empty">No pending leave requests.</div>
+        <div v-else class="page-empty">No pending leave requests.</div>
       </div>
 
       <!-- Reviewed Requests -->
-      <div class="section">
-        <h2>History ({{ reviewedRequests.length }})</h2>
+      <div class="page-section">
+        <h2 class="section-title">History ({{ reviewedRequests.length }})</h2>
         <div v-if="reviewedRequests.length" class="requests-list">
           <div
             v-for="request in reviewedRequests"
@@ -235,7 +250,7 @@ function formatDateTime(dateStr: string) {
             </div>
           </div>
         </div>
-        <div v-else class="empty">No reviewed requests yet.</div>
+        <div v-else class="page-empty">No reviewed requests yet.</div>
       </div>
     </template>
 
@@ -280,40 +295,26 @@ function formatDateTime(dateStr: string) {
             <small>Accepted formats: JPG, PNG, PDF, DOC, DOCX (max 10MB)</small>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">Submit Request</button>
           </div>
         </form>
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    :show="showDeleteConfirm"
+    title="Cancel Leave Request"
+    message="Are you sure you want to cancel this leave request? This action cannot be undone."
+    confirm-text="Cancel Request"
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
+  />
 </template>
 
 <style scoped>
-.leave-requests-view {
-  padding: 1rem;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.header h1 {
-  margin: 0;
-}
-
-.section {
-  margin-bottom: 2rem;
-}
-
-.section h2 {
-  font-size: 1.125rem;
-  margin-bottom: 1rem;
-  color: var(--color-dark-grey);
-}
+/* View-specific styles */
 
 .requests-list {
   display: flex;
@@ -346,7 +347,7 @@ function formatDateTime(dateStr: string) {
 
 .request-type {
   font-weight: 600;
-  color: var(--color-purple);
+  color: var(--color-primary);
   font-size: 1rem;
 }
 
@@ -374,7 +375,7 @@ function formatDateTime(dateStr: string) {
 }
 
 .request-document a {
-  color: var(--color-purple);
+  color: var(--color-primary);
   text-decoration: none;
   font-size: 0.875rem;
 }
@@ -438,12 +439,12 @@ function formatDateTime(dateStr: string) {
 }
 
 .btn-primary {
-  background: var(--color-purple);
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: var(--color-primary-dark);
 }
 
 .btn-primary:disabled {
@@ -465,33 +466,6 @@ function formatDateTime(dateStr: string) {
   background: #dc2626;
 }
 
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
-}
-
-.alert-success {
-  background: #dcfce7;
-  color: #166534;
-  border: 1px solid #bbf7d0;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
-}
-
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -503,20 +477,33 @@ function formatDateTime(dateStr: string) {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
   background: white;
   padding: 1.5rem;
   border-radius: 8px;
-  min-width: 450px;
-  max-width: 90%;
-  max-height: 90vh;
+  width: 100%;
+  max-width: 500px;
+  max-height: calc(100vh - 40px);
   overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
 }
 
 .modal h2 {
   margin: 0 0 1.5rem 0;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-group {

@@ -1,10 +1,25 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { enrollmentsService, type Enrollment } from '@/services/enrollments'
+import { ref, onMounted, computed } from 'vue'
+import { schedulesService, type Schedule } from '@/services/schedules'
+import { authService } from '@/services/auth'
 
-const enrollments = ref<Enrollment[]>([])
+const schedules = ref<Schedule[]>([])
 const loading = ref(false)
 const error = ref('')
+const selectedSemester = ref<1 | 2>(1)
+
+const user = computed(() => authService.getUser())
+
+// Extract unique courses from schedules
+const courses = computed(() => {
+  const courseMap = new Map()
+  schedules.value.forEach((schedule) => {
+    if (schedule.course && !courseMap.has(schedule.course.id)) {
+      courseMap.set(schedule.course.id, schedule.course)
+    }
+  })
+  return Array.from(courseMap.values())
+})
 
 onMounted(async () => {
   await loadData()
@@ -14,7 +29,12 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    enrollments.value = await enrollmentsService.getMyEnrollments()
+    const groupId = user.value?.groupId
+    if (!groupId) {
+      error.value = 'You are not assigned to a group yet. Please contact your administrator.'
+      return
+    }
+    schedules.value = await schedulesService.getMySchedule(selectedSemester.value)
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -22,48 +42,47 @@ async function loadData() {
   }
 }
 
-function getStatusClass(status: string) {
-  const classes: Record<string, string> = {
-    active: 'status-active',
-    completed: 'status-completed',
-    dropped: 'status-dropped',
-  }
-  return classes[status] || ''
-}
-
-function formatDate(dateStr?: string) {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+// Watch semester changes
+function onSemesterChange() {
+  loadData()
 }
 </script>
 
 <template>
-  <div class="my-courses">
-    <h1>My Courses</h1>
-    <p class="subtitle">View your enrolled courses</p>
+  <div class="page-container">
+    <div class="page-header-row">
+      <div class="page-header">
+        <h1 class="page-title">My Courses</h1>
+        <p class="page-subtitle">View your courses from group schedule</p>
+      </div>
+      <div class="semester-selector">
+        <label for="semester">Semester:</label>
+        <select id="semester" v-model="selectedSemester" @change="onSemesterChange" class="select">
+          <option :value="1">Semester 1</option>
+          <option :value="2">Semester 2</option>
+        </select>
+      </div>
+    </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
-    <div v-else-if="enrollments.length" class="courses-grid">
-      <div v-for="enrollment in enrollments" :key="enrollment.id" class="course-card">
+    <div v-else-if="courses.length" class="courses-grid">
+      <div v-for="course in courses" :key="course.id" class="course-card">
         <div class="course-header">
-          <span class="course-code">{{ enrollment.course?.code || 'N/A' }}</span>
-          <span class="status-badge" :class="getStatusClass(enrollment.status)">
-            {{ enrollment.status }}
-          </span>
+          <span class="course-code">{{ course.code || 'N/A' }}</span>
+          <span class="status-badge status-active">Active</span>
         </div>
-        <h3 class="course-name">{{ enrollment.course?.name }}</h3>
+        <h3 class="course-name">{{ course.name }}</h3>
         <div class="course-meta">
-          <span>Enrolled: {{ formatDate(enrollment.enrolledAt) }}</span>
+          <span>Credits: {{ course.credits || 0 }}</span>
+          <span v-if="course.teacher">
+            Teacher: {{ course.teacher.nameLatin || course.teacher.nameKhmer || '-' }}
+          </span>
         </div>
         <div class="course-actions">
           <router-link 
-            :to="{ name: 'student-attendance', query: { course: enrollment.courseId } }" 
+            :to="{ name: 'student-attendance', query: { course: course.id } }" 
             class="btn btn-sm"
           >
             View Attendance
@@ -72,25 +91,23 @@ function formatDate(dateStr?: string) {
       </div>
     </div>
 
-    <div v-else class="empty">
-      <p>You are not enrolled in any courses yet.</p>
-      <p class="hint">Contact your administrator to get enrolled in courses.</p>
+    <div v-else class="page-empty">
+      <p>No courses scheduled for Semester {{ selectedSemester }}.</p>
+      <p class="hint">Contact your administrator if this seems incorrect.</p>
     </div>
   </div>
 </template>
 
 <style scoped>
-.my-courses {
-  padding: 1rem;
+/* View-specific styles */
+.semester-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  color: var(--color-grey);
-  margin-bottom: 1.5rem;
+.semester-selector label {
+  font-weight: 500;
 }
 
 .courses-grid {
@@ -129,6 +146,9 @@ h1 {
 }
 
 .course-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   font-size: 0.875rem;
   color: var(--color-grey);
   margin-bottom: 1rem;
@@ -169,44 +189,9 @@ h1 {
 }
 
 .status-active { background: #d4edda; color: #155724; }
-.status-completed { background: #cce5ff; color: #004085; }
-.status-dropped { background: #f8d7da; color: #721c24; }
 
-.empty {
-  text-align: center;
-  padding: 3rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.empty p {
-  margin-bottom: 0.5rem;
-  color: var(--color-grey);
-}
-
-.empty .hint {
+.hint {
   font-size: 0.875rem;
   color: #999;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
-}
-
-.alert {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: #f8d7da;
-  color: #721c24;
 }
 </style>

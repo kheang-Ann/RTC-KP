@@ -8,6 +8,7 @@ import {
 } from '@/services/teachers'
 import { departmentsService, type Department } from '@/services/departments'
 import { isValidPhoneNumber, isValidOptionalPassword } from '@/utils/validation'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -17,6 +18,36 @@ const loading = ref(false)
 const error = ref('')
 const showModal = ref(false)
 const editingTeacher = ref<Teacher | null>(null)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref<number | null>(null)
+
+// Filters
+const searchQuery = ref('')
+const filterGender = ref<string>('')
+const filterDepartment = ref<number | null>(null)
+
+// Filtered teachers
+const filteredTeachers = computed(() => {
+  let result = teachers.value
+  
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(t => 
+      (t.nameLatin?.toLowerCase() || '').includes(query) || 
+      (t.nameKhmer?.toLowerCase() || '').includes(query)
+    )
+  }
+  
+  if (filterGender.value) {
+    result = result.filter(t => t.gender === filterGender.value)
+  }
+  
+  if (filterDepartment.value) {
+    result = result.filter(t => t.departmentId === filterDepartment.value)
+  }
+  
+  return result
+})
 
 // Image handling
 const imageFile = ref<File | null>(null)
@@ -225,17 +256,29 @@ async function saveTeacher() {
   }
 }
 
-async function deleteTeacher(id: number) {
-  if (!confirm('Are you sure you want to delete this teacher?')) return
+function deleteTeacher(id: number) {
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTargetId.value === null) return
+  showDeleteConfirm.value = false
   loading.value = true
   try {
-    await teachersService.delete(id)
+    await teachersService.delete(deleteTargetId.value)
     await loadData()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    deleteTargetId.value = null
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
 }
 
 function getDepartmentName(departmentId: number | undefined): string {
@@ -246,16 +289,40 @@ function getDepartmentName(departmentId: number | undefined): string {
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>👨‍🏫 Teachers Management</h1>
+  <div class="page-container">
+    <div class="page-header-row">
+      <h1 class="page-title">👨‍🏫 Teachers Management</h1>
       <button class="btn btn-primary" @click="openCreate">+ Add Teacher</button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
-    <table class="table" v-if="teachers.length">
+    <!-- Filters -->
+    <div class="page-filters">
+      <div class="filter-group">
+        <label>Search</label>
+        <input v-model="searchQuery" type="text" placeholder="Search by name..." />
+      </div>
+      <div class="filter-group">
+        <label>Gender</label>
+        <select v-model="filterGender">
+          <option value="">All</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Department</label>
+        <select v-model="filterDepartment">
+          <option :value="null">All Departments</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div v-if="loading" class="page-loading">Loading...</div>
+
+    <table class="page-table" v-if="filteredTeachers.length">
       <thead>
         <tr>
           <th>Photo</th>
@@ -268,7 +335,7 @@ function getDepartmentName(departmentId: number | undefined): string {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="teacher in teachers" :key="teacher.id">
+        <tr v-for="teacher in filteredTeachers" :key="teacher.id">
           <td>
             <img
               v-if="teacher.image"
@@ -284,7 +351,7 @@ function getDepartmentName(departmentId: number | undefined): string {
           <td>{{ getDepartmentName(teacher.departmentId) }}</td>
           <td>{{ teacher.personalEmail }}</td>
           <td>
-            <button class="btn btn-sm" @click="openEdit(teacher)">Edit</button>
+            <button class="btn btn-sm btn-secondary" @click="openEdit(teacher)">Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteTeacher(teacher.id)">
               Delete
             </button>
@@ -293,7 +360,8 @@ function getDepartmentName(departmentId: number | undefined): string {
       </tbody>
     </table>
 
-    <div v-else-if="!loading" class="empty">No teachers found.</div>
+    <div v-else-if="!loading && teachers.length" class="page-empty">No teachers match your filters.</div>
+    <div v-else-if="!loading" class="page-empty">No teachers found.</div>
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -450,7 +518,7 @@ function getDepartmentName(departmentId: number | undefined): string {
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">
               {{ editingTeacher ? 'Update' : 'Create' }}
             </button>
@@ -459,53 +527,18 @@ function getDepartmentName(departmentId: number | undefined): string {
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    :show="showDeleteConfirm"
+    title="Delete Teacher"
+    message="Are you sure you want to delete this teacher? This action cannot be undone."
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
+  />
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-  color: #374151;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-
-.table tr:hover {
-  background: #fafafa;
-}
-
+/* View-specific styles */
 .avatar {
   width: 40px;
   height: 40px;
@@ -524,46 +557,7 @@ function getDepartmentName(departmentId: number | undefined): string {
   font-size: 20px;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  cursor: pointer;
-  background: white;
-  font-size: 14px;
-  transition: all 0.2s;
-}
-
-.btn:hover {
-  background: #f9fafb;
-}
-
-.btn-primary {
-  background: var(--color-purple);
-  color: white;
-  border-color: var(--color-purple);
-}
-
-.btn-primary:hover {
-  background: #4338ca;
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-  border-color: var(--color-light-red);
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.btn-sm {
-  padding: 4px 10px;
-  margin-right: 4px;
-  font-size: 12px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -575,6 +569,8 @@ function getDepartmentName(departmentId: number | undefined): string {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
@@ -583,8 +579,20 @@ function getDepartmentName(departmentId: number | undefined): string {
   border-radius: 12px;
   width: 100%;
   max-width: 600px;
-  max-height: 90vh;
+  max-height: calc(100vh - 40px);
   overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
 }
 
 .modal h2 {
@@ -647,8 +655,8 @@ function getDepartmentName(departmentId: number | undefined): string {
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-purple);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .image-upload {
@@ -701,24 +709,6 @@ function getDepartmentName(departmentId: number | undefined): string {
   margin-top: 24px;
   padding-top: 16px;
   border-top: 1px solid #e5e7eb;
-}
-
-.alert-error {
-  padding: 12px 16px;
-  background: #fef2f2;
-  color: #b91c1c;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  border: 1px solid #fecaca;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
 }
 
 /* Field error styles */

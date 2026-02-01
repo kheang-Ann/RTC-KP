@@ -12,6 +12,7 @@ import {
 import { Department } from 'src/modules/departments/entity/department.entity';
 import { Program } from 'src/modules/programs/entities/program.entity';
 import { User } from 'src/modules/users/entities/user.entity';
+import { Group } from 'src/modules/groups/entities/group.entity';
 
 export enum Gender {
   MALE = 'male',
@@ -82,6 +83,15 @@ export class Student {
 
   @Column({ type: 'int', default: 1 })
   academicYear: number;
+
+  // Group assignment
+  @Index()
+  @Column({ type: 'int', nullable: true })
+  groupId: number | null;
+
+  @ManyToOne(() => Group, (group) => group.students, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'groupId' })
+  group: Group | null;
 
   // Contact Information
   @Column()

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { enrollmentsService, type Enrollment } from '@/services/enrollments'
+import { schedulesService, type Schedule } from '@/services/schedules'
 import { attendanceService, type Attendance } from '@/services/attendance'
 import { authService } from '@/services/auth'
 
-const enrollments = ref<Enrollment[]>([])
+const schedules = ref<Schedule[]>([])
 const attendances = ref<Attendance[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -36,11 +36,11 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [enrollmentsData, attendancesData] = await Promise.all([
-      enrollmentsService.getMyEnrollments(),
+    const [schedulesData, attendancesData] = await Promise.all([
+      schedulesService.getMySchedule(1), // Default to semester 1
       attendanceService.getMyAttendance(),
     ])
-    enrollments.value = enrollmentsData
+    schedules.value = schedulesData
     attendances.value = attendancesData
   } catch (e) {
     error.value = (e as Error).message
@@ -72,19 +72,21 @@ function formatDate(dateStr?: string) {
 </script>
 
 <template>
-  <div class="student-dashboard">
-    <h1>Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
-    <p class="subtitle">Student Dashboard</p>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
+      <p class="page-subtitle">Student Dashboard</p>
+    </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <template v-else>
       <!-- Stats Cards -->
-      <div class="stats-grid">
+      <div class="page-stats-grid">
         <div class="stat-card border-left-blue">
-          <div class="stat-value">{{ enrollments.length }}</div>
+          <div class="stat-value">{{ new Set(schedules.map((s: Schedule) => s.courseId)).size }}</div>
           <div class="stat-label">Enrolled Courses</div>
         </div>
         <div class="stat-card border-left-lightblue">
@@ -103,11 +105,15 @@ function formatDate(dateStr?: string) {
           <div class="stat-value">{{ stats.absent }}</div>
           <div class="stat-label">Absent</div>
         </div>
+        <div class="stat-card border-left-lightpurple">
+          <div class="stat-value">{{ stats.excused }}</div>
+          <div class="stat-label">Excused</div>
+        </div>
       </div>
 
       <!-- Quick Actions -->
-      <div class="section">
-        <h2>Quick Actions</h2>
+      <div class="page-section">
+        <h2 class="section-title">Quick Actions</h2>
         <div class="quick-actions">
           <router-link to="/student/check-in" class="action-card">
             <span class="action-icon">✓</span>
@@ -129,22 +135,22 @@ function formatDate(dateStr?: string) {
       </div>
 
       <!-- My Courses -->
-      <div class="section">
-        <h2>My Courses</h2>
-        <div v-if="enrollments.length" class="courses-grid">
-          <div v-for="enrollment in enrollments" :key="enrollment.id" class="course-card">
-            <div class="course-code">{{ enrollment.course?.code || 'N/A' }}</div>
-            <div class="course-name">{{ enrollment.course?.name || 'Unknown Course' }}</div>
-            <div class="course-status" :class="enrollment.status">{{ enrollment.status }}</div>
+      <div class="page-section">
+        <h2 class="section-title">My Courses</h2>
+        <div v-if="schedules.length" class="courses-grid">
+          <div v-for="schedule in schedules.filter((s, i, arr) => arr.findIndex((x) => x.courseId === s.courseId) === i).slice(0, 6)" :key="schedule.id" class="course-card">
+            <div class="course-code">{{ schedule.course?.code || 'N/A' }}</div>
+            <div class="course-name">{{ schedule.course?.name || 'Unknown Course' }}</div>
+            <div class="course-status active">Active</div>
           </div>
         </div>
-        <div v-else class="empty">You are not enrolled in any courses yet.</div>
+        <div v-else class="page-empty">No courses scheduled yet.</div>
       </div>
 
       <!-- Recent Attendance -->
-      <div class="section">
-        <h2>Recent Attendance</h2>
-        <table v-if="recentAttendances.length" class="table">
+      <div class="page-section">
+        <h2 class="section-title">Recent Attendance</h2>
+        <table v-if="recentAttendances.length" class="page-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -164,63 +170,14 @@ function formatDate(dateStr?: string) {
             </tr>
           </tbody>
         </table>
-        <div v-else class="empty">No attendance records yet.</div>
+        <div v-else class="page-empty">No attendance records yet.</div>
       </div>
     </template>
   </div>
 </template>
 
 <style scoped>
-.student-dashboard {
-  padding: 1rem;
-}
-
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  color: var(--color-grey);
-  margin-bottom: 1.5rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: var(--color-dark-grey);
-}
-
-.stat-label {
-  color: var(--color-grey);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.stat-success .stat-value { color: #28a745; }
-
-.section {
-  margin-bottom: 2rem;
-}
-
-.section h2 {
-  margin-bottom: 1rem;
-  font-size: 1.25rem;
-}
+/* View-specific styles */
 
 .quick-actions {
   display: flex;
@@ -302,27 +259,6 @@ h1 {
   color: #721c24;
 }
 
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f8f9fa;
-  font-weight: 600;
-}
-
 .status-badge {
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
@@ -335,24 +271,4 @@ h1 {
 .status-late { background: #fff3cd; color: #856404; }
 .status-absent { background: #f8d7da; color: #721c24; }
 .status-excused { background: #cce5ff; color: #004085; }
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
-}
-
-.alert {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: #f8d7da;
-  color: #721c24;
-}
 </style>

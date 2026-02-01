@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { programsService, type Program, type CreateProgramDto } from '@/services/programs'
 import { departmentsService, type Department } from '@/services/departments'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const programs = ref<Program[]>([])
 const departments = ref<Department[]>([])
@@ -9,6 +10,8 @@ const loading = ref(false)
 const error = ref('')
 const showModal = ref(false)
 const editingProgram = ref<Program | null>(null)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref<number | null>(null)
 
 const degreeTypes = ['Bachelor', 'Master', 'PhD'] as const
 
@@ -90,17 +93,29 @@ async function saveProgram() {
   }
 }
 
-async function deleteProgram(id: number) {
-  if (!confirm('Are you sure you want to delete this program?')) return
+function deleteProgram(id: number) {
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTargetId.value === null) return
+  showDeleteConfirm.value = false
   loading.value = true
   try {
-    await programsService.delete(id)
+    await programsService.delete(deleteTargetId.value)
     await loadData()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    deleteTargetId.value = null
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
 }
 
 function getDegreeColor(degreeType: string) {
@@ -118,16 +133,16 @@ function getDegreeColor(degreeType: string) {
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Programs Management</h1>
+  <div class="page-container">
+    <div class="page-header-row">
+      <h1 class="page-title">Programs Management</h1>
       <button class="btn btn-primary" @click="openCreate">+ Add Program</button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
-    <table class="table" v-if="programs.length">
+    <table class="page-table" v-if="programs.length">
       <thead>
         <tr>
           <th>ID</th>
@@ -150,7 +165,7 @@ function getDegreeColor(degreeType: string) {
           </td>
           <td>{{ program.department?.name || '-' }}</td>
           <td>
-            <button class="btn btn-sm" @click="openEdit(program)">Edit</button>
+            <button class="btn btn-sm btn-secondary" @click="openEdit(program)">Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteProgram(program.id)">
               Delete
             </button>
@@ -159,7 +174,7 @@ function getDegreeColor(degreeType: string) {
       </tbody>
     </table>
 
-    <div v-else-if="!loading" class="empty">No programs found.</div>
+    <div v-else-if="!loading" class="page-empty">No programs found.</div>
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -204,7 +219,7 @@ function getDegreeColor(degreeType: string) {
             </select>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">
               {{ editingProgram ? 'Update' : 'Create' }}
             </button>
@@ -213,48 +228,18 @@ function getDegreeColor(degreeType: string) {
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    :show="showDeleteConfirm"
+    title="Delete Program"
+    message="Are you sure you want to delete this program? This action cannot be undone."
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
+  />
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-  color: #374151;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-
-.table tr:hover {
-  background: #fafafa;
-}
-
+/* View-specific styles */
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -278,31 +263,7 @@ function getDegreeColor(degreeType: string) {
   color: #065f46;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  background: white;
-}
-
-.btn-primary {
-  background: var(--color-purple);
-  color: white;
-  border-color: var(--color-purple);
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-  border-color: var(--color-light-red);
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  margin-right: 4px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -313,6 +274,9 @@ function getDegreeColor(degreeType: string) {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
@@ -321,6 +285,20 @@ function getDegreeColor(degreeType: string) {
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
 }
 
 .form-row {
@@ -355,22 +333,5 @@ function getDegreeColor(degreeType: string) {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 20px;
-}
-
-.alert-error {
-  padding: 12px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
 }
 </style>

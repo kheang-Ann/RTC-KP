@@ -280,7 +280,7 @@ h1 {
   align-items: center;
   gap: 20px;
   padding: 24px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
   color: white;
 }
 

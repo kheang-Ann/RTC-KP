@@ -13,8 +13,9 @@ import {
   CheckInMethod,
 } from './entities/attendance.entity';
 import { Session, SessionStatus } from '../sessions/entities/session.entity';
-import { Enrollment } from '../enrollments/entities/enrollment.entity';
 import { Course } from '../courses/entities/course.entity';
+import { Student } from '../students/entities/student.entity';
+import { Schedule } from '../schedules/entities/schedule.entity';
 import { CheckInDto } from './dto/checkin-attendance.dto';
 import { MarkAttendanceDto } from './dto/mark-attendance.dto';
 import { BulkMarkAttendanceDto } from './dto/bulk-mark-attendance.dto';
@@ -27,8 +28,10 @@ export class AttendancesService {
     private attendanceRepo: Repository<Attendance>,
     @InjectRepository(Session)
     private sessionRepo: Repository<Session>,
-    @InjectRepository(Enrollment)
-    private enrollmentRepo: Repository<Enrollment>,
+    @InjectRepository(Student)
+    private studentRepo: Repository<Student>,
+    @InjectRepository(Schedule)
+    private scheduleRepo: Repository<Schedule>,
     @InjectRepository(Course)
     private courseRepo: Repository<Course>,
   ) {}
@@ -51,16 +54,29 @@ export class AttendancesService {
       throw new BadRequestException('Session is not currently active');
     }
 
-    // Check if student is enrolled in the course
-    const enrollment = await this.enrollmentRepo.findOne({
+    // Check if student's group has this course scheduled
+    const student = await this.studentRepo.findOne({
+      where: { userId: studentId },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student profile not found');
+    }
+
+    if (!student.groupId) {
+      throw new ForbiddenException('You are not assigned to a group');
+    }
+
+    const schedule = await this.scheduleRepo.findOne({
       where: {
-        studentId,
+        groupId: student.groupId,
         courseId: session.courseId,
+        isActive: true,
       },
     });
 
-    if (!enrollment) {
-      throw new ForbiddenException('You are not enrolled in this course');
+    if (!schedule) {
+      throw new ForbiddenException('Your group does not have this course scheduled');
     }
 
     // Check if already checked in

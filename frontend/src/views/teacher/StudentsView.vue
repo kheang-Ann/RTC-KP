@@ -1,29 +1,29 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import { usersService, type User } from '@/services/users'
-import { enrollmentsService, type Enrollment } from '@/services/enrollments'
+import { ref, onMounted, computed } from 'vue'
+import { schedulesService, type Schedule } from '@/services/schedules'
 import { coursesService, type Course } from '@/services/courses'
 import { attendanceService, type Attendance } from '@/services/attendance'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
+import { groupsService, type AvailableStudent } from '@/services/groups'
 
-const students = ref<User[]>([])
+const students = ref<AvailableStudent[]>([])
+const studentGroupMap = ref<Map<number, number[]>>(new Map()) // studentId -> groupIds[]
 const courses = ref<Course[]>([])
-const enrollments = ref<Enrollment[]>([])
+const schedules = ref<Schedule[]>([])
 const departments = ref<Department[]>([])
 const programs = ref<Program[]>([])
 const loading = ref(false)
 const error = ref('')
 
 // Filters
-const selectedDepartment = ref<number | null>(null)
-const selectedProgram = ref<number | null>(null)
+const selectedGender = ref<string>('')
 const selectedCourse = ref<string>('')
 const searchQuery = ref('')
 
 // Modal state
 const showAttendanceModal = ref(false)
-const selectedStudent = ref<User | null>(null)
+const selectedStudent = ref<AvailableStudent | null>(null)
 const studentAttendance = ref<Attendance[]>([])
 
 const filteredStudents = computed(() => {
@@ -34,52 +34,31 @@ const filteredStudents = computed(() => {
     result = result.filter(
       (s) =>
         (s.nameLatin?.toLowerCase() || '').includes(query) ||
-        (s.nameKhmer?.toLowerCase() || '').includes(query) ||
-        s.email.toLowerCase().includes(query),
+        (s.nameKhmer?.toLowerCase() || '').includes(query),
     )
+  }
+
+  if (selectedGender.value) {
+    result = result.filter((s) => s.gender === selectedGender.value)
   }
 
   return result
 })
 
-const filteredPrograms = computed(() => {
-  if (!selectedDepartment.value) return programs.value
-  return programs.value.filter((p) => p.departmentId === selectedDepartment.value)
-})
 
-const filteredCourses = computed(() => {
-  if (!selectedDepartment.value) return courses.value
-  return courses.value.filter((c) => c.departmentId === selectedDepartment.value)
-})
-
-// Reset selections when parent filter changes
-watch(selectedDepartment, () => {
-  selectedProgram.value = null
-  selectedCourse.value = ''
-})
-
-watch(selectedProgram, () => {
-  selectedCourse.value = ''
-})
 
 const studentsInCourse = computed(() => {
-  // Get IDs of all courses the teacher manages
-  const teacherCourseIds = courses.value.map((c) => c.id)
+  let result = filteredStudents.value
   
-  // Get IDs of students enrolled in teacher's courses
-  const enrolledInTeacherCourses = enrollments.value
-    .filter((e) => teacherCourseIds.includes(e.courseId))
-    .map((e) => e.studentId)
-  
-  // Base filter: only students in teacher's courses
-  let result = filteredStudents.value.filter((s) => enrolledInTeacherCourses.includes(s.id))
-  
-  // Additional filter by selected course
+  // Filter by selected course
   if (selectedCourse.value) {
-    const enrolledIds = enrollments.value
-      .filter((e) => e.courseId === selectedCourse.value)
-      .map((e) => e.studentId)
-    result = result.filter((s) => enrolledIds.includes(s.id))
+    // Get group IDs for this course from schedules
+    const groupIds = schedules.value
+      .filter(s => s.courseId === selectedCourse.value)
+      .map(s => s.groupId)
+    
+    // Filter students who belong to those groups
+    result = result.filter(s => groupIds.includes(s.id))
   }
   
   return result
@@ -93,18 +72,45 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [studentsData, coursesData, enrollmentsData, departmentsData, programsData] = await Promise.all([
-      usersService.getStudents(),
+    const [coursesData, schedulesData, departmentsData, programsData] = await Promise.all([
       coursesService.getMyCourses(),
-      enrollmentsService.getAll(),
+      schedulesService.getMyTeachingSchedule(1), // Default to semester 1
       departmentsService.getAll(),
       programsService.getAll(),
     ])
-    students.value = studentsData
     courses.value = coursesData
-    enrollments.value = enrollmentsData
+    schedules.value = schedulesData
     departments.value = departmentsData
     programs.value = programsData
+
+    // Get unique groups from schedules
+    const groupIds = [...new Set(schedulesData.map(s => s.groupId))]
+    
+    // Fetch students from all groups
+    const studentsPromises = groupIds.map(groupId => groupsService.getStudentsInGroup(groupId))
+    const studentsArrays = await Promise.all(studentsPromises)
+    
+    // Build student-to-group mapping and flatten students
+    const studentGroupMapping = new Map<number, number[]>()
+    const allStudents: AvailableStudent[] = []
+    
+    studentsArrays.forEach((studentsInGroup, index) => {
+      const groupId = groupIds[index]
+      if (groupId === undefined) return
+      
+      studentsInGroup.forEach(student => {
+        if (!allStudents.find(s => s.id === student.id)) {
+          allStudents.push(student)
+        }
+        const existingGroups = studentGroupMapping.get(student.id) || []
+        if (!existingGroups.includes(groupId)) {
+          studentGroupMapping.set(student.id, [...existingGroups, groupId])
+        }
+      })
+    })
+    
+    students.value = allStudents
+    studentGroupMap.value = studentGroupMapping
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -112,20 +118,28 @@ async function loadData() {
   }
 }
 
-function getStudentEnrollments(studentId: number) {
-  // Only show enrollments in teacher's courses
-  const teacherCourseIds = courses.value.map((c) => c.id)
-  return enrollments.value.filter(
-    (e) => e.studentId === studentId && teacherCourseIds.includes(e.courseId),
-  )
+function getStudentCourses(studentId: number) {
+  // Get the groups this student belongs to
+  const studentGroups = studentGroupMap.value.get(studentId) || []
+  if (studentGroups.length === 0) return []
+  
+  // Find schedules for the student's groups and return unique courses
+  return schedules.value
+    .filter(s => studentGroups.includes(s.groupId))
+    .map(s => ({ course: s.course }))
+    .filter((item, index, arr) => 
+      item.course && arr.findIndex(x => x.course?.id === item.course?.id) === index
+    )
 }
 
-async function viewAttendance(student: User) {
+async function viewAttendance(student: AvailableStudent) {
   selectedStudent.value = student
   loading.value = true
   error.value = ''
   try {
-    studentAttendance.value = await attendanceService.getByStudent(student.id)
+    // Use userId if available, otherwise student id
+    const idToUse = student.userId || student.id
+    studentAttendance.value = await attendanceService.getByStudent(idToUse)
     showAttendanceModal.value = true
   } catch (e) {
     error.value = (e as Error).message
@@ -150,78 +164,71 @@ function formatDate(dateStr: string) {
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Manage Students</h1>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">Manage Students</h1>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
     <!-- Filters -->
-    <div class="filters">
+    <div class="page-filters">
       <div class="filter-group">
         <label>Search</label>
-        <input v-model="searchQuery" type="text" placeholder="Search by name or email..." />
+        <input v-model="searchQuery" type="text" placeholder="Search by name..." />
       </div>
       <div class="filter-group">
-        <label>Filter by Department</label>
-        <select v-model="selectedDepartment">
-          <option :value="null">All Departments</option>
-          <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-            {{ dept.name }}
-          </option>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label>Filter by Program</label>
-        <select v-model="selectedProgram" :disabled="!selectedDepartment">
-          <option :value="null">All Programs</option>
-          <option v-for="program in filteredPrograms" :key="program.id" :value="program.id">
-            {{ program.name }}
-          </option>
+        <label>Filter by Gender</label>
+        <select v-model="selectedGender">
+          <option value="">All Genders</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
         </select>
       </div>
       <div class="filter-group">
         <label>Filter by Course</label>
-        <select v-model="selectedCourse" :disabled="!selectedDepartment">
+        <select v-model="selectedCourse">
           <option value="">All Students</option>
-          <option v-for="course in filteredCourses" :key="course.id" :value="course.id">
+          <option v-for="course in courses" :key="course.id" :value="course.id">
             {{ course.code }} - {{ course.name }}
           </option>
         </select>
       </div>
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <!-- Students Table -->
-    <table class="table" v-if="studentsInCourse.length">
+    <table class="page-table" v-if="studentsInCourse.length">
       <thead>
         <tr>
           <th>ID</th>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Department</th>
-          <th>Enrolled Courses</th>
+          <th>Name (Latin)</th>
+          <th>Name (Khmer)</th>
+          <th>Gender</th>
+          <th>Program</th>
+          <th>Courses</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="student in studentsInCourse" :key="student.id">
           <td>{{ student.id }}</td>
-          <td>{{ student.nameLatin || student.nameKhmer || '-' }}</td>
-          <td>{{ student.email }}</td>
-          <td>{{ student.department?.name || '-' }}</td>
+          <td>{{ student.nameLatin || '-' }}</td>
+          <td>{{ student.nameKhmer || '-' }}</td>
+          <td>{{ student.gender || '-' }}</td>
+          <td>{{ student.program?.name || '-' }}</td>
           <td>
-            <div class="enrollments-list">
+            <div class="courses-list">
               <span
-                v-for="enrollment in getStudentEnrollments(student.id)"
-                :key="enrollment.id"
-                class="enrollment-badge"
+                v-for="item in getStudentCourses(student.id)"
+                :key="item.course?.id"
+                class="course-badge"
               >
-                {{ enrollment.course?.code || 'Unknown' }}
+                {{ item.course?.code || 'Unknown' }}
               </span>
-              <span v-if="!getStudentEnrollments(student.id).length" class="no-courses">
+              <span v-if="!getStudentCourses(student.id).length" class="no-courses">
                 No courses
               </span>
             </div>
@@ -235,7 +242,7 @@ function formatDate(dateStr: string) {
       </tbody>
     </table>
 
-    <div v-else-if="!loading" class="empty">No students found.</div>
+    <div v-else-if="!loading" class="page-empty">No students found.</div>
 
     <!-- Attendance Modal -->
     <div v-if="showAttendanceModal" class="modal-overlay" @click.self="showAttendanceModal = false">
@@ -246,7 +253,7 @@ function formatDate(dateStr: string) {
         </p>
 
         <div v-if="studentAttendance.length" class="attendance-content">
-          <table class="table">
+          <table class="page-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -269,10 +276,10 @@ function formatDate(dateStr: string) {
             </tbody>
           </table>
         </div>
-        <div v-else class="empty">No attendance records found.</div>
+        <div v-else class="page-empty">No attendance records found.</div>
 
         <div class="modal-actions">
-          <button class="btn" @click="showAttendanceModal = false">Close</button>
+          <button class="btn btn-secondary" @click="showAttendanceModal = false">Close</button>
         </div>
       </div>
     </div>
@@ -280,66 +287,14 @@ function formatDate(dateStr: string) {
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  margin-bottom: 20px;
-}
-
-.filters {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-group label {
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.filter-group input,
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 200px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.table th {
-  background-color: #f5f5f5;
-  font-weight: 600;
-}
-
-.enrollments-list {
+/* View-specific styles */
+.courses-list {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.enrollment-badge {
+.course-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -355,7 +310,7 @@ function formatDate(dateStr: string) {
   border: none;
   cursor: pointer;
   font-size: 14px;
-  color: #6366f1;
+  color: var(--color-primary);
   padding: 0 2px;
 }
 
@@ -396,30 +351,7 @@ function formatDate(dateStr: string) {
   color: #1e40af;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  background: white;
-}
-
-.btn-primary {
-  background: var(--color-purple);
-  color: white;
-  border-color: var(--color-purple);
-}
-
-.btn-secondary {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-.btn-sm {
-  padding: 4px 12px;
-  margin-right: 4px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -431,6 +363,8 @@ function formatDate(dateStr: string) {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
@@ -439,8 +373,13 @@ function formatDate(dateStr: string) {
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
-  max-height: 80vh;
+  max-height: calc(100vh - 40px);
   overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
 }
 
 .modal-lg {
@@ -479,28 +418,5 @@ function formatDate(dateStr: string) {
 .attendance-content {
   max-height: 400px;
   overflow-y: auto;
-}
-
-.alert-error {
-  padding: 12px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.alert-success {
-  padding: 12px;
-  background: #d1fae5;
-  color: #065f46;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 40px;
-  color: var(--color-grey);
 }
 </style>

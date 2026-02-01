@@ -9,9 +9,10 @@ const AdminDepartmentsView = () => import('@/views/admin/DepartmentsView.vue')
 const AdminStudentsView = () => import('@/views/admin/StudentsView.vue')
 const AdminTeachersView = () => import('@/views/admin/TeachersView.vue')
 const AdminAttendanceView = () => import('@/views/admin/AttendanceView.vue')
-const AdminEnrollmentsView = () => import('@/views/admin/EnrollmentsView.vue')
 const AdminProgramsView = () => import('@/views/admin/ProgramsView.vue')
 const AdminSessionsView = () => import('@/views/admin/SessionsView.vue')
+const AdminGroupsView = () => import('@/views/admin/GroupsView.vue')
+const AdminScheduleView = () => import('@/views/admin/ScheduleView.vue')
 const TeacherDashboardView = () => import('@/views/teacher/DashboardView.vue')
 const TeacherAttendanceView = () => import('@/views/teacher/AttendanceView.vue')
 const TeacherStudentsView = () => import('@/views/teacher/StudentsView.vue')
@@ -21,7 +22,9 @@ const StudentCheckInView = () => import('@/views/student/CheckInView.vue')
 const StudentAttendanceView = () => import('@/views/student/AttendanceView.vue')
 const StudentCoursesView = () => import('@/views/student/CoursesView.vue')
 const StudentLeaveRequestsView = () => import('@/views/student/LeaveRequestsView.vue')
+const StudentScheduleView = () => import('@/views/student/ScheduleView.vue')
 const TeacherLeaveRequestsView = () => import('@/views/teacher/LeaveRequestsView.vue')
+const TeacherScheduleView = () => import('@/views/teacher/ScheduleView.vue')
 const AdminLeaveRequestsView = () => import('@/views/admin/LeaveRequestsView.vue')
 const ProfileView = () => import('@/views/ProfileView.vue')
 const RedirectView = () => import('@/views/RedirectView.vue')
@@ -92,14 +95,19 @@ const router = createRouter({
           component: AdminSessionsView,
         },
         {
-          path: 'enrollments',
-          name: 'admin-enrollments',
-          component: AdminEnrollmentsView,
-        },
-        {
           path: 'leave-requests',
           name: 'admin-leave-requests',
           component: AdminLeaveRequestsView,
+        },
+        {
+          path: 'groups',
+          name: 'admin-groups',
+          component: AdminGroupsView,
+        },
+        {
+          path: 'schedule',
+          name: 'admin-schedule',
+          component: AdminScheduleView,
         },
         {
           path: 'profile',
@@ -141,6 +149,11 @@ const router = createRouter({
           component: TeacherLeaveRequestsView,
         },
         {
+          path: 'schedule',
+          name: 'teacher-schedule',
+          component: TeacherScheduleView,
+        },
+        {
           path: 'profile',
           name: 'teacher-profile',
           component: ProfileView,
@@ -178,6 +191,11 @@ const router = createRouter({
           path: 'leave-requests',
           name: 'student-leave-requests',
           component: StudentLeaveRequestsView,
+        },
+        {
+          path: 'schedule',
+          name: 'student-schedule',
+          component: StudentScheduleView,
         },
         {
           path: 'profile',

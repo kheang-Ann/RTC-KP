@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, nextTick } from 'vue'
+import { ref, onMounted, computed, watch} from 'vue'
 import { sessionsService, type Session, type CreateSessionDto, type SessionStatus } from '@/services/sessions'
 import { coursesService, type Course } from '@/services/courses'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
 import QRCode from 'qrcode'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const sessions = ref<Session[]>([])
 const courses = ref<Course[]>([])
@@ -18,6 +19,8 @@ const error = ref('')
 const successMessage = ref('')
 const showModal = ref(false)
 const showCodeModal = ref(false)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref<string | null>(null)
 const activeSession = ref<Session | null>(null)
 const editingSession = ref<Session | null>(null)
 const qrCodeDataUrl = ref<string>('')
@@ -181,11 +184,17 @@ async function regenerateCode(session: Session) {
   }
 }
 
-async function deleteSession(id: string) {
-  if (!confirm('Are you sure you want to delete this session?')) return
+function deleteSession(id: string) {
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTargetId.value === null) return
+  showDeleteConfirm.value = false
   loading.value = true
   try {
-    await sessionsService.delete(id)
+    await sessionsService.delete(deleteTargetId.value)
     successMessage.value = 'Session deleted!'
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
@@ -193,7 +202,13 @@ async function deleteSession(id: string) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    deleteTargetId.value = null
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
 }
 
 function showCode(session: Session) {
@@ -212,7 +227,7 @@ async function generateQRCode(code: string | undefined) {
       width: 200,
       margin: 2,
       color: {
-        dark: '#8b5cf6',
+        dark: '#3b82f6',
         light: '#ffffff'
       }
     })
@@ -246,17 +261,17 @@ function getStatusLabel(status: SessionStatus) {
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Sessions Management</h1>
+  <div class="page-container">
+    <div class="page-header-row">
+      <h1 class="page-title">Sessions Management</h1>
       <button class="btn btn-primary" @click="openCreate">+ Create Session</button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="successMessage" class="page-alert page-alert-success">{{ successMessage }}</div>
 
     <!-- Filter -->
-    <div class="filters">
+    <div class="page-filters">
       <div class="filter-group">
         <label>Filter by Department</label>
         <select v-model="selectedDepartment">
@@ -286,10 +301,10 @@ function getStatusLabel(status: SessionStatus) {
       </div>
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <!-- Sessions Table -->
-    <table class="table" v-if="filteredSessions.length">
+    <table class="page-table" v-if="filteredSessions.length">
       <thead>
         <tr>
           <th>Title</th>
@@ -344,14 +359,14 @@ function getStatusLabel(status: SessionStatus) {
             >
               New Code
             </button>
-            <button class="btn btn-sm" @click="openEdit(session)">Edit</button>
+            <button class="btn btn-sm btn-secondary" @click="openEdit(session)">Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteSession(session.id)">Delete</button>
           </td>
         </tr>
       </tbody>
     </table>
 
-    <div v-else-if="!loading" class="empty">
+    <div v-else-if="!loading" class="page-empty">
       No sessions found. Create your first session!
     </div>
 
@@ -388,7 +403,7 @@ function getStatusLabel(status: SessionStatus) {
             </div>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">
               {{ editingSession ? 'Update' : 'Create' }}
             </button>
@@ -422,7 +437,7 @@ function getStatusLabel(status: SessionStatus) {
         
         <p class="code-instruction">Share this code or QR with students to check in</p>
         <div class="modal-actions">
-          <button class="btn" @click="showCodeModal = false">Close</button>
+          <button class="btn btn-secondary" @click="showCodeModal = false">Close</button>
           <button class="btn btn-primary" @click="regenerateCode(activeSession)">
             Regenerate Code
           </button>
@@ -430,139 +445,33 @@ function getStatusLabel(status: SessionStatus) {
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    :show="showDeleteConfirm"
+    title="Delete Session"
+    message="Are you sure you want to delete this session? This action cannot be undone."
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
+  />
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.filters {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  min-width: 200px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.table th {
-  background: #f9fafb;
-  font-weight: 600;
-  color: #374151;
-}
-
+/* View-specific styles */
 .actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.btn:hover {
-  background: #d1d5db;
-}
-
-.btn-primary {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #2563eb;
-}
-
-.btn-success {
-  background: #10b981;
-  color: white;
-}
-
-.btn-success:hover {
-  background: #059669;
-}
-
-.btn-warning {
-  background: #f59e0b;
-  color: white;
-}
-
-.btn-warning:hover {
-  background: #d97706;
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
-}
-
 .btn-code {
-  background: #8b5cf6;
+  background: var(--color-primary);
   color: white;
   font-family: monospace;
   font-weight: bold;
 }
 
 .btn-code:hover {
-  background: #7c3aed;
+  background: var(--color-primary-dark);
 }
 
 .status-badge {
@@ -596,31 +505,7 @@ function getStatusLabel(status: SessionStatus) {
   color: #9ca3af;
 }
 
-.alert {
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-}
-
-.alert-error {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.alert-success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -632,6 +517,8 @@ function getStatusLabel(status: SessionStatus) {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
@@ -640,8 +527,13 @@ function getStatusLabel(status: SessionStatus) {
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: calc(100vh - 40px);
   overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
 }
 
 .modal h2 {
@@ -667,6 +559,7 @@ function getStatusLabel(status: SessionStatus) {
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 14px;
+  box-sizing: border-box;
 }
 
 .form-group textarea {
@@ -700,8 +593,8 @@ function getStatusLabel(status: SessionStatus) {
   font-size: 48px;
   font-weight: bold;
   font-family: monospace;
-  color: #8b5cf6;
-  background: #f5f3ff;
+  color: var(--color-primary);
+  background: #eff6ff;
   padding: 24px;
   border-radius: 12px;
   letter-spacing: 8px;

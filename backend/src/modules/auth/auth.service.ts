@@ -12,6 +12,8 @@ import { Repository } from 'typeorm';
 import { RefreshToken } from '../users/entities/refresh-toke.entity';
 import { JwtService } from '@nestjs/jwt';
 import { randomBytes } from 'crypto';
+import { Student } from '../students/entities/student.entity';
+import { Teacher } from '../teachers/entities/teacher.entity';
 
 @Injectable()
 export class AuthService {
@@ -19,6 +21,10 @@ export class AuthService {
     private userService: UserService,
     @InjectRepository(RefreshToken)
     private refreshTokens: Repository<RefreshToken>,
+    @InjectRepository(Student)
+    private studentRepo: Repository<Student>,
+    @InjectRepository(Teacher)
+    private teacherRepo: Repository<Teacher>,
     private jwt: JwtService,
   ) {}
 
@@ -52,12 +58,41 @@ export class AuthService {
       ),
     ];
 
+    // Get student/teacher info if applicable
+    let studentId: number | null = null;
+    let groupId: number | null = null;
+    let teacherId: number | null = null;
+
+    if (roleNames.includes('student')) {
+      const student = await this.studentRepo.findOne({
+        where: { userId: user.id },
+        select: ['id', 'groupId'],
+      });
+      if (student) {
+        studentId = student.id;
+        groupId = student.groupId;
+      }
+    }
+
+    if (roleNames.includes('teacher')) {
+      const teacher = await this.teacherRepo.findOne({
+        where: { userId: user.id },
+        select: ['id'],
+      });
+      if (teacher) {
+        teacherId = teacher.id;
+      }
+    }
+
     const accessToken = await this.jwt.signAsync(
       {
         sub: user.id,
         email: user.email,
         roles: roleNames,
         permissions: permissionKeys,
+        studentId,
+        groupId,
+        teacherId,
       },
       {
         secret: process.env.JWT_ACCESS_SECRET,
@@ -86,6 +121,9 @@ export class AuthService {
         nameKhmer: user.nameKhmer,
         nameLatin: user.nameLatin,
         roles: roleNames,
+        studentId,
+        groupId,
+        teacherId,
       },
     };
   }

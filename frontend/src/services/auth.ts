@@ -21,6 +21,9 @@ export interface AuthResponse {
     nameKhmer?: string
     nameLatin?: string
     roles: string[]
+    studentId?: number | null
+    groupId?: number | null
+    teacherId?: number | null
   }
 }
 
@@ -32,6 +35,9 @@ export interface CurrentUser {
   firstName?: string
   lastName?: string
   roles: string[]
+  studentId?: number | null
+  groupId?: number | null
+  teacherId?: number | null
 }
 
 export const authService = {

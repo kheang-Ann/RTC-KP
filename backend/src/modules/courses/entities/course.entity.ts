@@ -4,12 +4,10 @@ import {
   Column,
   Entity,
   JoinColumn,
-  OneToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   Index,
 } from 'typeorm';
-import { Enrollment } from '../../enrollments/entities/enrollment.entity';
 
 @Entity('courses')
 export class Course {
@@ -40,12 +38,6 @@ export class Course {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'teacherId' })
   teacher: User;
-
-  @OneToMany(() => Enrollment, (enrollment) => enrollment.course, {
-    cascade: true,
-    onDelete: 'CASCADE',
-  })
-  enrollments: Enrollment[];
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

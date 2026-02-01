@@ -1,28 +1,34 @@
 /* src/assets/main.css */
 
 :root {
-  /* Colors */
-  --color-primary: #2e43fa;
-  --color-light-red: #ffdfdf;
-  --color-light-green: #22c55e;
-  --color-dark-red: #f1181880;
-  --color-red: #ff0d0d80;
-  --color-light-red: #ef4444;
-  --color-light-green: #d9fbd2;
-  --color-dark-green: #306425;
-  --color-pink: #b94ee6;
-  --color-yellow: #facb2e;
-  --color-light-blue: #d3d7fbcc;
-  --color-gray: #d9d9d9;
+  /* Primary Colors */
+  --color-primary: #3b82f6;        /* Blue - primary action color */
+  --color-primary-dark: #2563eb;   /* Darker blue for hover */
+  --color-primary-light: #93c5fd;  /* Light blue for backgrounds */
+  
+  /* Status Colors */
+  --color-success: #22c55e;        /* Green - success/present */
+  --color-warning: #f59e0b;        /* Orange - warning/late */
+  --color-danger: #ef4444;         /* Red - danger/absent */
+  --color-info: #3b82f6;           /* Blue - info */
+  --color-excused: #8b5cf6;        /* Purple - excused */
+  
+  /* Neutral Colors */
   --color-white: #ffffff;
-  --color-dark-blue: #374151;
   --color-black: #000000;
+  --color-grey-light: #f3f4f6;     /* Light grey backgrounds */
+  --color-grey: #6b7280;           /* Medium grey text */
+  --color-grey-dark: #374151;      /* Dark grey text */
+  
+  /* Semantic Colors (for backwards compatibility) */
+  --color-light-red: #ef4444;
+  --color-light-green: #22c55e;
+  --color-dark-green: #059669;
   --color-light-purple: #8b5cf6;
-  --color-purple: #4f46e5;
+  --color-purple: #7c3aed;
   --color-orange: #f59e0b;
   --color-light-blue: #3b82f6;
-  --color-grey: #666;
-  --color-dark-grey: #333;
+  --color-dark-grey: #374151;
 
 
   /* Font Weights */
@@ -72,4 +78,644 @@ p { font-size: var(--fs-para); }
 
 .border-left-green {
   border-left: 4px solid var(--color-dark-green)
+}
+
+/* ===== Page Layout Classes ===== */
+/* Standard left-aligned page container */
+.page-container {
+  padding: 1.5rem;
+  max-width: 1400px;
+}
+
+/* Page header with title and subtitle */
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-dark-grey);
+  margin: 0 0 0.25rem 0;
+}
+
+.page-subtitle {
+  font-size: 0.9375rem;
+  color: var(--color-grey);
+  margin: 0;
+}
+
+/* Header with actions (title on left, buttons on right) */
+.page-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header-row .page-title {
+  margin-bottom: 0.25rem;
+}
+
+/* Section styling */
+.page-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-dark-grey);
+  margin: 0 0 1rem 0;
+}
+
+/* Stats grid */
+.page-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card .stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--color-dark-grey);
+}
+
+.stat-card .stat-label {
+  font-size: 0.875rem;
+  color: var(--color-grey);
+  margin-top: 0.25rem;
+}
+
+.stat-card.stat-success .stat-value {
+  color: #22c55e;
+}
+
+.stat-card.stat-success {
+  border-left: 4px solid #22c55e;
+}
+
+/* Standard table */
+.page-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.page-table th,
+.page-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.page-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--color-dark-grey);
+}
+
+.page-table td {
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.page-table tr:hover {
+  background: #fafafa;
+}
+
+/* Cards grid */
+.page-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+/* Common alert styles */
+.page-alert {
+  padding: 0.875rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+
+.page-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.page-alert-success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.page-alert-warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+/* Loading and empty states */
+.page-loading,
+.page-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: #6b7280;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Filter bar */
+.page-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.page-filters .filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-filters label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-dark-grey);
+}
+
+.page-filters select,
+.page-filters input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+
+/* Base button style */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  color: var(--color-dark-grey);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.btn:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Button sizes */
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+}
+
+.btn-block {
+  display: flex;
+  width: 100%;
+}
+
+/* Button variants */
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--color-dark-grey);
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover {
+  background: #f5f5f5;
+}
+
+.btn-success {
+  background: #22c55e;
+  color: white;
+  border-color: #22c55e;
+}
+
+.btn-success:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+  border-color: #d97706;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn-code {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.btn-code:hover {
+  background: var(--color-primary-dark);
+  border-color: var(--color-primary-dark);
+}
+
+/* Outline variants */
+.btn-outline {
+  background: white;
+  color: var(--color-dark-grey);
+  border: 1px solid #ddd;
+}
+
+.btn-outline:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.btn-outline-danger {
+  background: white;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+.btn-outline-danger:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+/* ===== Actions Container ===== */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ===== Select Styling ===== */
+select {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ===== Filter Group ===== */
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-dark-grey);
+}
+
+.filter-group select {
+  min-width: 150px;
+}
+
+/* ===== Status Badges ===== */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* Session/General statuses */
+.status-scheduled {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-completed {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.status-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Attendance statuses */
+.status-present {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-late {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-absent {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-excused {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* Leave request statuses */
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Academic statuses */
+.status-suspended {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-leave {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-graduation {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+/* ===== Modal Styles (Global) ===== */
+.modal h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-dark-grey);
+}
+
+.modal h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem 0;
+  color: var(--color-dark-grey);
+}
+
+/* ===== Text utilities ===== */
+.text-muted {
+  color: var(--color-grey);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-medium {
+  font-weight: 500;
+}
+
+/* ===== Responsive Styles ===== */
+@media (max-width: 768px) {
+  body {
+    margin: 0;
+  }
+
+  /* Page container */
+  .page-container {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.8rem;
+  }
+
+  /* Stats grid - 2 columns on tablet */
+  .page-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  /* Filters - stack vertically */
+  .page-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group label {
+    margin-bottom: 0.25rem;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+  }
+
+  /* Tables - horizontal scroll */
+  .page-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .page-table th,
+  .page-table td {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  /* Header row */
+  .page-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  /* Actions */
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal {
+    padding: 16px;
+    max-height: calc(100vh - 20px);
+  }
+
+  .modal h2 {
+    font-size: 1.1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .form-group {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Stats grid - 1 column on small mobile */
+  .page-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+  }
+
+  /* Hide less important table columns on mobile */
+  .page-table .hide-mobile {
+    display: none;
+  }
+
+  /* Stack action buttons */
+  .actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .actions .btn {
+    width: 100%;
+    text-align: center;
+  }
 }
