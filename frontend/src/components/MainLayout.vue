@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authService } from '@/services/auth'
 
 const route = useRoute()
 const router = useRouter()
+
+// Mobile menu state
+const isMobileMenuOpen = ref(false)
 
 const user = computed(() => authService.getUser())
 const userInitial = computed(() => {
@@ -82,14 +85,35 @@ function logout() {
   authService.logout()
   router.push('/login')
 }
+
+function toggleMobileMenu() {
+  isMobileMenuOpen.value = !isMobileMenuOpen.value
+}
+
+function closeMobileMenu() {
+  isMobileMenuOpen.value = false
+}
 </script>
 
 <template>
   <div class="layout">
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" @click="toggleMobileMenu">
+      <span class="hamburger" :class="{ open: isMobileMenuOpen }"></span>
+    </button>
+
+    <!-- Mobile Overlay -->
+    <div 
+      v-if="isMobileMenuOpen" 
+      class="mobile-overlay" 
+      @click="closeMobileMenu"
+    ></div>
+
     <!-- Sidebar -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ open: isMobileMenuOpen }">
       <div class="sidebar-header">
         <span class="menu-label">Menu</span>
+        <button class="close-menu" @click="closeMobileMenu">✕</button>
       </div>
       <nav class="sidebar-nav">
         <router-link
@@ -98,6 +122,7 @@ function logout() {
           :to="item.path"
           class="nav-item"
           :class="{ active: isActive(item.path) }"
+          @click="closeMobileMenu"
         >
           <span class="nav-icon">{{ item.icon }}</span>
           <span class="nav-text">{{ item.name }}</span>
@@ -285,5 +310,156 @@ function logout() {
   margin-top: 64px;
   padding: 24px;
   overflow-y: auto;
+}
+
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 200;
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburger {
+  display: block;
+  width: 20px;
+  height: 2px;
+  background: #374151;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 2px;
+  background: #374151;
+  left: 0;
+  transition: all 0.3s;
+}
+
+.hamburger::before {
+  top: -6px;
+}
+
+.hamburger::after {
+  top: 6px;
+}
+
+.hamburger.open {
+  background: transparent;
+}
+
+.hamburger.open::before {
+  transform: rotate(45deg);
+  top: 0;
+}
+
+.hamburger.open::after {
+  transform: rotate(-45deg);
+  top: 0;
+}
+
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+}
+
+.close-menu {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  .mobile-overlay {
+    display: block;
+  }
+
+  .close-menu {
+    display: block;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .main-wrapper {
+    margin-left: 0;
+  }
+
+  .navbar {
+    left: 0;
+    padding: 0 16px 0 60px;
+  }
+
+  .navbar-title {
+    font-size: 16px;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .content {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-title {
+    font-size: 14px;
+  }
+
+  .logout-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .content {
+    padding: 12px;
+  }
 }
 </style>

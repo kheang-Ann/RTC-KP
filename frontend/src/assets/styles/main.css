@@ -578,3 +578,144 @@ select:disabled {
 .font-medium {
   font-weight: 500;
 }
+
+/* ===== Responsive Styles ===== */
+@media (max-width: 768px) {
+  body {
+    margin: 0;
+  }
+
+  /* Page container */
+  .page-container {
+    padding: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .page-subtitle {
+    font-size: 0.8rem;
+  }
+
+  /* Stats grid - 2 columns on tablet */
+  .page-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .stat-card {
+    padding: 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
+  }
+
+  /* Filters - stack vertically */
+  .page-filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group label {
+    margin-bottom: 0.25rem;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+  }
+
+  /* Tables - horizontal scroll */
+  .page-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .page-table th,
+  .page-table td {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  /* Header row */
+  .page-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  /* Actions */
+  .actions {
+    flex-wrap: wrap;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal {
+    padding: 16px;
+    max-height: calc(100vh - 20px);
+  }
+
+  .modal h2 {
+    font-size: 1.1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .form-group {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Stats grid - 1 column on small mobile */
+  .page-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+  }
+
+  /* Hide less important table columns on mobile */
+  .page-table .hide-mobile {
+    display: none;
+  }
+
+  /* Stack action buttons */
+  .actions {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .actions .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
