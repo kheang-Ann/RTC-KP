@@ -113,6 +113,10 @@ function getCourseName(courseId?: string) {
         <div class="stat-value">{{ stats.absent }}</div>
         <div class="stat-label">Absent</div>
       </div>
+      <div class="stat-card border-left-lightpurple">
+        <div class="stat-value">{{ stats.excused }}</div>
+        <div class="stat-label">Excused</div>
+      </div>
     </div>
 
     <!-- Filter -->

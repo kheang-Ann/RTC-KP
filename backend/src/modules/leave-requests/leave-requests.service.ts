@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 import {
   LeaveRequest,
   LeaveRequestStatus,
@@ -15,6 +15,13 @@ import { CreateLeaveRequestDto } from './dto/create-leave-request.dto';
 import { ReviewLeaveRequestDto } from './dto/review-leave-request.dto';
 import { Student } from '../students/entities/student.entity';
 import { Teacher } from '../teachers/entities/teacher.entity';
+import { Session } from '../sessions/entities/session.entity';
+import {
+  Attendance,
+  AttendanceStatus,
+  CheckInMethod,
+} from '../attendances/entities/attendance.entity';
+import { Schedule } from '../schedules/entities/schedule.entity';
 
 @Injectable()
 export class LeaveRequestsService {
@@ -25,6 +32,12 @@ export class LeaveRequestsService {
     private studentRepo: Repository<Student>,
     @InjectRepository(Teacher)
     private teacherRepo: Repository<Teacher>,
+    @InjectRepository(Session)
+    private sessionRepo: Repository<Session>,
+    @InjectRepository(Attendance)
+    private attendanceRepo: Repository<Attendance>,
+    @InjectRepository(Schedule)
+    private scheduleRepo: Repository<Schedule>,
   ) {}
 
   private calculateTotalDays(startDate: Date, endDate: Date): number {
@@ -235,7 +248,85 @@ export class LeaveRequestsService {
     leaveRequest.reviewedById = reviewerId;
     leaveRequest.reviewedAt = new Date();
 
-    return this.leaveRequestRepo.save(leaveRequest);
+    const savedLeaveRequest = await this.leaveRequestRepo.save(leaveRequest);
+
+    // If approved and it's a student leave request, auto-record excused attendance
+    if (
+      dto.status === LeaveRequestStatus.APPROVED &&
+      leaveRequest.requesterType === RequesterType.STUDENT &&
+      leaveRequest.studentId
+    ) {
+      await this.autoRecordExcusedAttendance(leaveRequest);
+    }
+
+    return savedLeaveRequest;
+  }
+
+  /**
+   * Auto-record excused attendance for all sessions that fall within the approved leave period
+   */
+  private async autoRecordExcusedAttendance(
+    leaveRequest: LeaveRequest,
+  ): Promise<void> {
+    if (!leaveRequest.studentId) return;
+
+    // Get the student to find their group
+    const student = await this.studentRepo.findOne({
+      where: { id: leaveRequest.studentId },
+    });
+
+    if (!student || !student.groupId) return;
+
+    // Get all schedules for this student's group
+    const schedules = await this.scheduleRepo.find({
+      where: { groupId: student.groupId, isActive: true },
+    });
+
+    if (schedules.length === 0) return;
+
+    const courseIds = schedules.map((s) => s.courseId);
+
+    // Find all sessions within the leave period for courses the student is enrolled in
+    const startDate = new Date(leaveRequest.startDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(leaveRequest.endDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    const sessions = await this.sessionRepo
+      .createQueryBuilder('session')
+      .where('session.courseId IN (:...courseIds)', { courseIds })
+      .andWhere('session.startTime >= :startDate', { startDate })
+      .andWhere('session.startTime <= :endDate', { endDate })
+      .getMany();
+
+    // Create or update attendance records as excused for each session
+    for (const session of sessions) {
+      const existingAttendance = await this.attendanceRepo.findOne({
+        where: {
+          sessionId: session.id,
+          studentId: student.userId,
+        },
+      });
+
+      if (existingAttendance) {
+        // Update existing attendance to excused
+        existingAttendance.status = AttendanceStatus.EXCUSED;
+        existingAttendance.remarks = `Leave approved: ${leaveRequest.leaveType}`;
+        await this.attendanceRepo.save(existingAttendance);
+      } else {
+        // Create new excused attendance
+        const attendance = this.attendanceRepo.create({
+          sessionId: session.id,
+          studentId: student.userId,
+          status: AttendanceStatus.EXCUSED,
+          checkInMethod: CheckInMethod.MANUAL,
+          checkInTime: session.startTime,
+          remarks: `Leave approved: ${leaveRequest.leaveType}`,
+        });
+        await this.attendanceRepo.save(attendance);
+      }
+    }
   }
 
   async remove(
