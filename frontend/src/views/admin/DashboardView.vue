@@ -110,37 +110,45 @@ function formatDate(dateStr?: string) {
       <div class="page-section">
         <h2 class="section-title">Quick Actions</h2>
         <div class="quick-actions">
-          <router-link to="/admin/students" class="action-card">
+          <router-link to="/admin/students" class="action-card card-blue">
             <span class="action-icon">👨‍🎓</span>
-            <span class="action-label">Manage Students</span>
+            <span class="action-label">Students</span>
+            <span class="action-desc">Manage students</span>
           </router-link>
-          <router-link to="/admin/teachers" class="action-card">
+          <router-link to="/admin/teachers" class="action-card card-green">
             <span class="action-icon">👨‍🏫</span>
-            <span class="action-label">Manage Teachers</span>
+            <span class="action-label">Teachers</span>
+            <span class="action-desc">Manage teachers</span>
           </router-link>
-          <router-link to="/admin/departments" class="action-card">
+          <router-link to="/admin/departments" class="action-card card-purple">
             <span class="action-icon">🏢</span>
-            <span class="action-label">Manage Departments</span>
+            <span class="action-label">Departments</span>
+            <span class="action-desc">Manage departments</span>
           </router-link>
-          <router-link to="/admin/programs" class="action-card">
+          <router-link to="/admin/programs" class="action-card card-teal">
             <span class="action-icon">🎓</span>
-            <span class="action-label">Manage Programs</span>
+            <span class="action-label">Programs</span>
+            <span class="action-desc">Manage programs</span>
           </router-link>
-          <router-link to="/admin/courses" class="action-card">
+          <router-link to="/admin/courses" class="action-card card-orange">
             <span class="action-icon">📚</span>
-            <span class="action-label">Manage Courses</span>
+            <span class="action-label">Courses</span>
+            <span class="action-desc">Manage courses</span>
           </router-link>
-          <router-link to="/admin/sessions" class="action-card">
+          <router-link to="/admin/sessions" class="action-card card-indigo">
             <span class="action-icon">📅</span>
-            <span class="action-label">Manage Sessions</span>
+            <span class="action-label">Sessions</span>
+            <span class="action-desc">Manage sessions</span>
           </router-link>
-          <router-link to="/admin/attendance" class="action-card">
+          <router-link to="/admin/attendance" class="action-card card-pink">
             <span class="action-icon">✅</span>
-            <span class="action-label">Manage Attendance</span>
+            <span class="action-label">Attendance</span>
+            <span class="action-desc">View attendance</span>
           </router-link>
-          <router-link to="/admin/leave-requests" class="action-card">
+          <router-link to="/admin/leave-requests" class="action-card card-red">
             <span class="action-icon">📄</span>
-            <span class="action-label">Leave Requests</span>
+            <span class="action-label">Leave</span>
+            <span class="action-desc">Review requests</span>
           </router-link>
         </div>
       </div>
@@ -224,29 +232,103 @@ function formatDate(dateStr?: string) {
 
 .action-card {
   background: white;
-  border-radius: 8px;
-  padding: 1.25rem;
+  border-radius: 12px;
+  padding: 1.5rem 1rem;
   text-align: center;
   text-decoration: none;
   color: var(--color-dark-grey);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.action-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent-color, #3b82f6), var(--accent-light, #60a5fa));
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.action-card:hover::before {
+  transform: scaleX(1);
 }
 
 .action-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+  border-color: var(--accent-color, #3b82f6);
+}
+
+.action-card.card-blue {
+  --accent-color: #3b82f6;
+  --accent-light: #60a5fa;
+}
+
+.action-card.card-green {
+  --accent-color: #10b981;
+  --accent-light: #34d399;
+}
+
+.action-card.card-purple {
+  --accent-color: #8b5cf6;
+  --accent-light: #a78bfa;
+}
+
+.action-card.card-teal {
+  --accent-color: #14b8a6;
+  --accent-light: #2dd4bf;
+}
+
+.action-card.card-orange {
+  --accent-color: #f59e0b;
+  --accent-light: #fbbf24;
+}
+
+.action-card.card-indigo {
+  --accent-color: #6366f1;
+  --accent-light: #818cf8;
+}
+
+.action-card.card-pink {
+  --accent-color: #ec4899;
+  --accent-light: #f472b6;
+}
+
+.action-card.card-red {
+  --accent-color: #ef4444;
+  --accent-light: #f87171;
 }
 
 .action-icon {
-  font-size: 1.75rem;
+  font-size: 2.25rem;
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.65rem;
+  transition: transform 0.3s ease;
+}
+
+.action-card:hover .action-icon {
+  transform: scale(1.1);
 }
 
 .action-label {
-  font-weight: 500;
-  font-size: 0.875rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.action-desc {
+  font-size: 0.7rem;
+  color: var(--color-grey);
 }
 
 .course-card {
