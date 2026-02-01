@@ -60,11 +60,20 @@ export class StudentService {
       );
     }
 
-    // Check for duplicate phone numbers
+    // Check for duplicate phone numbers (simple-array stores as comma-separated string)
     for (const phone of dto.phoneNumbers) {
       const existingPhone = await this.studentRepo
         .createQueryBuilder('student')
-        .where(':phone = ANY(student.phoneNumbers)', { phone })
+        .where('student.phoneNumbers = :phone', { phone })
+        .orWhere('student.phoneNumbers LIKE :phoneStart', {
+          phoneStart: `${phone},%`,
+        })
+        .orWhere('student.phoneNumbers LIKE :phoneMiddle', {
+          phoneMiddle: `%,${phone},%`,
+        })
+        .orWhere('student.phoneNumbers LIKE :phoneEnd', {
+          phoneEnd: `%,${phone}`,
+        })
         .getOne();
       if (existingPhone) {
         throw new ConflictException(
@@ -173,13 +182,21 @@ export class StudentService {
       }
     }
 
-    // Check for duplicate phone numbers (excluding current student)
+    // Check for duplicate phone numbers (excluding current student, simple-array stores as comma-separated string)
     if (dto.phoneNumbers) {
       for (const phone of dto.phoneNumbers) {
         const existingPhone = await this.studentRepo
           .createQueryBuilder('student')
-          .where(':phone = ANY(student.phoneNumbers)', { phone })
-          .andWhere('student.id != :id', { id })
+          .where('student.id != :id', { id })
+          .andWhere(
+            '(student.phoneNumbers = :phone OR student.phoneNumbers LIKE :phoneStart OR student.phoneNumbers LIKE :phoneMiddle OR student.phoneNumbers LIKE :phoneEnd)',
+            {
+              phone,
+              phoneStart: `${phone},%`,
+              phoneMiddle: `%,${phone},%`,
+              phoneEnd: `%,${phone}`,
+            },
+          )
           .getOne();
         if (existingPhone) {
           throw new ConflictException(

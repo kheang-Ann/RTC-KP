@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Program } from './entities/program.entity';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { UpdateProgramDto } from './dto/update-program.dto';
@@ -75,8 +75,20 @@ export class ProgramService {
       }
       dto.name = trimmedName;
     }
-    Object.assign(program, dto);
-    return this.programRepo.save(program);
+
+    // Update program properties
+    if (dto.name !== undefined) program.name = dto.name;
+    if (dto.duration !== undefined) program.duration = dto.duration;
+    if (dto.degreeType !== undefined) program.degreeType = dto.degreeType;
+    if (dto.departmentId !== undefined) {
+      program.departmentId = dto.departmentId;
+      // Clear the relation so TypeORM uses departmentId
+      delete (program as Partial<Program>).department;
+    }
+
+    const savedProgram = await this.programRepo.save(program);
+    // Reload with relation to return updated department
+    return this.findOne(savedProgram.id);
   }
 
   async remove(id: number): Promise<void> {

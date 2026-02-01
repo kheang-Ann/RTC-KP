@@ -8,6 +8,8 @@ import {
 } from '@/services/leave-requests'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
 const leaveRequests = ref<LeaveRequest[]>([])
 const loading = ref(false)
 const error = ref('')
@@ -203,7 +205,7 @@ function formatDateTime(dateStr: string) {
               </div>
               <div class="request-reason">{{ request.reason }}</div>
               <div v-if="request.documentPath" class="request-document">
-                <a :href="request.documentPath" target="_blank">📎 View Document</a>
+                <a :href="`${API_BASE}${request.documentPath}`" target="_blank">📎 View Document</a>
               </div>
               <div class="request-meta">Submitted: {{ formatDateTime(request.createdAt) }}</div>
             </div>
@@ -234,7 +236,7 @@ function formatDateTime(dateStr: string) {
               </div>
               <div class="request-reason">{{ request.reason }}</div>
               <div v-if="request.documentPath" class="request-document">
-                <a :href="request.documentPath" target="_blank">📎 View Document</a>
+                <a :href="`${API_BASE}${request.documentPath}`" target="_blank">📎 View Document</a>
               </div>
               <div v-if="request.reviewNote" class="request-review-note">
                 <strong>{{ request.status === 'rejected' ? 'Rejection Reason:' : 'Review Note:' }}</strong>

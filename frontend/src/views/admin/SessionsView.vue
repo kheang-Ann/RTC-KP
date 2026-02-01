@@ -362,6 +362,7 @@ function getStatusLabel(status: SessionStatus) {
 
     <!-- Create/Edit Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+      <div v-if="error" class="modal-error">{{ error }}</div>
       <div class="modal">
         <h2>{{ editingSession ? 'Edit Session' : 'Create Session' }}</h2>
         <form @submit.prevent="saveSession">
@@ -501,11 +502,24 @@ function getStatusLabel(status: SessionStatus) {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 1000;
   padding: 20px;
   overflow-y: auto;
+  gap: 12px;
+}
+
+.modal-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  font-weight: 500;
 }
 
 .modal {
