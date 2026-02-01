@@ -115,9 +115,23 @@ export class GroupService {
       }
     }
 
+    // Check if academic year is changing
+    const academicYearChanged =
+      dto.academicYear && dto.academicYear !== group.academicYear;
+
     Object.assign(group, dto);
     if (dto.name) group.name = dto.name.trim();
-    return this.groupRepo.save(group);
+    const savedGroup = await this.groupRepo.save(group);
+
+    // Update all students in this group to the new academic year
+    if (academicYearChanged) {
+      await this.studentRepo.update(
+        { groupId: id },
+        { academicYear: dto.academicYear },
+      );
+    }
+
+    return savedGroup;
   }
 
   async remove(id: number): Promise<void> {

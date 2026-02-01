@@ -13,6 +13,7 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 const leaveRequests = ref<LeaveRequest[]>([])
 const loading = ref(false)
 const error = ref('')
+const modalError = ref('')
 const successMessage = ref('')
 const showModal = ref(false)
 const documentFile = ref<File | null>(null)
@@ -74,6 +75,7 @@ function openModal() {
     reason: '',
   }
   documentFile.value = null
+  modalError.value = ''
   showModal.value = true
 }
 
@@ -88,17 +90,17 @@ function handleFileChange(event: Event) {
 
 async function submitRequest() {
   if (!form.value.reason || !form.value.startDate || !form.value.endDate) {
-    error.value = 'Please fill in all required fields'
+    modalError.value = 'Please fill in all required fields'
     return
   }
 
   if (new Date(form.value.endDate) < new Date(form.value.startDate)) {
-    error.value = 'End date cannot be before start date'
+    modalError.value = 'End date cannot be before start date'
     return
   }
 
   loading.value = true
-  error.value = ''
+  modalError.value = ''
   try {
     await leaveRequestsService.createStudentRequest(form.value, documentFile.value || undefined)
     successMessage.value = 'Leave request submitted successfully!'
@@ -106,7 +108,7 @@ async function submitRequest() {
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
   } catch (e) {
-    error.value = (e as Error).message
+    modalError.value = (e as Error).message
   } finally {
     loading.value = false
   }
@@ -260,6 +262,7 @@ function formatDateTime(dateStr: string) {
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal">
         <h2>Submit Leave Request</h2>
+        <div v-if="modalError" class="page-alert page-alert-error">{{ modalError }}</div>
         <form @submit.prevent="submitRequest">
           <div class="form-group">
             <label>Leave Type *</label>
