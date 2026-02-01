@@ -11,6 +11,7 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { Student } from '../students/entities/student.entity';
 import { Program } from '../programs/entities/program.entity';
+import { Schedule } from '../schedules/entities/schedule.entity';
 
 @Injectable()
 export class GroupService {
@@ -21,6 +22,8 @@ export class GroupService {
     private studentRepo: Repository<Student>,
     @InjectRepository(Program)
     private programRepo: Repository<Program>,
+    @InjectRepository(Schedule)
+    private scheduleRepo: Repository<Schedule>,
   ) {}
 
   async findAll(): Promise<Group[]> {
@@ -118,8 +121,32 @@ export class GroupService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.groupRepo.delete(id);
-    if (result.affected === 0) throw new NotFoundException('Group not found');
+    const group = await this.groupRepo.findOne({ where: { id } });
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    // Check for related students
+    const studentsCount = await this.studentRepo.count({
+      where: { groupId: id },
+    });
+    if (studentsCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete group. Please remove ${studentsCount} student(s) from this group first.`,
+      );
+    }
+
+    // Check for related schedules
+    const schedulesCount = await this.scheduleRepo.count({
+      where: { groupId: id },
+    });
+    if (schedulesCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete group. Please remove ${schedulesCount} schedule(s) first.`,
+      );
+    }
+
+    await this.groupRepo.delete(id);
   }
 
   async addStudentsToGroup(

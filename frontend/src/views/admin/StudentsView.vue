@@ -141,9 +141,15 @@ const form = ref({
 // Reset programId when department changes
 watch(
   () => form.value.departmentId,
-  () => {
-    if (!editingStudent.value) {
-      form.value.programId = undefined
+  (newDept, oldDept) => {
+    // Reset program when department changes and the current program doesn't belong to the new department
+    if (newDept !== oldDept && form.value.programId) {
+      const programBelongsToNewDept = allPrograms.value.find(
+        (p) => p.id === form.value.programId && p.departmentId === newDept,
+      )
+      if (!programBelongsToNewDept) {
+        form.value.programId = undefined
+      }
     }
   },
 )
