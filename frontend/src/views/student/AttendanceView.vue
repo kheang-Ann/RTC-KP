@@ -2,7 +2,6 @@
 import { ref, onMounted, computed } from 'vue'
 import { attendanceService, type Attendance } from '@/services/attendance'
 import { schedulesService, type Schedule } from '@/services/schedules'
-import { authService } from '@/services/auth'
 
 const attendances = ref<Attendance[]>([])
 const schedules = ref<Schedule[]>([])
@@ -26,8 +25,6 @@ const stats = computed(() => {
 
   return { total, present, late, absent, excused, attendanceRate }
 })
-
-const user = computed(() => authService.getUser())
 
 onMounted(async () => {
   await loadData()
