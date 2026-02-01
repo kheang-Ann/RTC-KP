@@ -230,7 +230,14 @@ function formatDateTimeLocal(date: Date): string {
 }
 
 function formatDateTime(dateStr: string) {
-  return new Date(dateStr).toLocaleString()
+  return new Date(dateStr).toLocaleString('en-GB', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  })
 }
 
 function getStatusClass(status: SessionStatus) {

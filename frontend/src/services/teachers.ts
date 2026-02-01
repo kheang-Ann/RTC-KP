@@ -140,7 +140,7 @@ export const teachersService = {
     if (trimmedData.nameLatin) formData.append('nameLatin', trimmedData.nameLatin)
     if (data.gender) formData.append('gender', data.gender)
     if (data.dob) formData.append('dob', data.dob)
-    if (data.departmentId) formData.append('departmentId', data.departmentId.toString())
+    if (data.departmentId !== undefined) formData.append('departmentId', data.departmentId.toString())
     if (trimmedData.email) formData.append('email', trimmedData.email)
     if (trimmedData.personalEmail) formData.append('personalEmail', trimmedData.personalEmail)
     if (trimmedData.phoneNumbers) formData.append('phoneNumbers', JSON.stringify(trimmedData.phoneNumbers))
