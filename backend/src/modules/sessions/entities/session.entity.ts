@@ -48,10 +48,10 @@ export class Session {
   @JoinColumn({ name: 'createdById' })
   createdBy: User;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   startTime: Date;
 
-  @Column({ type: 'timestamp' })
+  @Column({ type: 'timestamptz' })
   endTime: Date;
 
   @Index({ unique: true })

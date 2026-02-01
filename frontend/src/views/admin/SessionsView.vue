@@ -120,11 +120,17 @@ async function saveSession() {
   loading.value = true
   error.value = ''
   try {
+    // Convert local datetime-local values to ISO strings with timezone
+    const payload = {
+      ...form.value,
+      startTime: new Date(form.value.startTime).toISOString(),
+      endTime: new Date(form.value.endTime).toISOString(),
+    }
     if (editingSession.value) {
-      await sessionsService.update(editingSession.value.id, form.value)
+      await sessionsService.update(editingSession.value.id, payload)
       successMessage.value = 'Session updated successfully!'
     } else {
-      await sessionsService.create(form.value)
+      await sessionsService.create(payload)
       successMessage.value = 'Session created successfully!'
     }
     showModal.value = false
