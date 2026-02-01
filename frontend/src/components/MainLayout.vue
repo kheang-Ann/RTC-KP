@@ -184,7 +184,7 @@ function logout() {
 }
 
 .nav-item.active {
-  background: #6366f1;
+  background: var(--color-primary);
   color: white;
 }
 
@@ -249,7 +249,7 @@ function logout() {
 .user-avatar {
   width: 36px;
   height: 36px;
-  background: #6366f1;
+  background: var(--color-primary);
   color: white;
   border-radius: 50%;
   display: flex;

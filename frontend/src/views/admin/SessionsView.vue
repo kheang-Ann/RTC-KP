@@ -442,14 +442,14 @@ function getStatusLabel(status: SessionStatus) {
 }
 
 .btn-code {
-  background: #8b5cf6;
+  background: var(--color-primary);
   color: white;
   font-family: monospace;
   font-weight: bold;
 }
 
 .btn-code:hover {
-  background: #7c3aed;
+  background: var(--color-primary-dark);
 }
 
 /* Status badges */
@@ -579,8 +579,8 @@ function getStatusLabel(status: SessionStatus) {
   font-size: 48px;
   font-weight: bold;
   font-family: monospace;
-  color: #8b5cf6;
-  background: #f5f3ff;
+  color: var(--color-primary);
+  background: #eff6ff;
   padding: 24px;
   border-radius: 12px;
   letter-spacing: 8px;

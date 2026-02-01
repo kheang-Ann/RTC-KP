@@ -128,8 +128,8 @@ async function handleLogin() {
 
 .form-group input:focus {
   outline: none;
-  border-color: var(--color-purple);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .btn {
@@ -142,12 +142,12 @@ async function handleLogin() {
 }
 
 .btn-primary {
-  background: var(--color-purple);
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: var(--color-primary-dark);
 }
 
 .btn-primary:disabled {

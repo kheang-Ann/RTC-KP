@@ -347,7 +347,7 @@ function formatDateTime(dateStr: string) {
 
 .request-type {
   font-weight: 600;
-  color: var(--color-purple);
+  color: var(--color-primary);
   font-size: 1rem;
 }
 
@@ -375,7 +375,7 @@ function formatDateTime(dateStr: string) {
 }
 
 .request-document a {
-  color: var(--color-purple);
+  color: var(--color-primary);
   text-decoration: none;
   font-size: 0.875rem;
 }
@@ -439,12 +439,12 @@ function formatDateTime(dateStr: string) {
 }
 
 .btn-primary {
-  background: var(--color-purple);
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #4338ca;
+  background: var(--color-primary-dark);
 }
 
 .btn-primary:disabled {

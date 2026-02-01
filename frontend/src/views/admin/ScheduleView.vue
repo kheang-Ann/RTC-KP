@@ -713,7 +713,7 @@ const maxDuration = computed(() => {
 }
 
 .day-header {
-  background: #7c3aed;
+  background: var(--color-primary);
   color: white;
   font-weight: 600;
   padding: 12px 8px;

@@ -346,7 +346,7 @@ function formatDateTime(dateStr: string) {
 
 .request-type {
   font-weight: 600;
-  color: var(--color-purple);
+  color: var(--color-primary);
   font-size: 1rem;
 }
 
@@ -374,7 +374,7 @@ function formatDateTime(dateStr: string) {
 }
 
 .request-document a {
-  color: var(--color-purple);
+  color: var(--color-primary);
   text-decoration: none;
   font-size: 0.875rem;
 }

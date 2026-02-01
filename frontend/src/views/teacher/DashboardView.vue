@@ -302,7 +302,7 @@ function formatDateTime(dateStr: string) {
 .course-code {
   font-size: 1.25rem;
   font-weight: bold;
-  color: var(--color-purple);
+  color: var(--color-primary);
 }
 
 .course-name {

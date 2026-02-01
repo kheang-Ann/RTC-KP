@@ -98,6 +98,13 @@ const maxAcademicYear = computed(() => {
   return program?.duration || 10
 })
 
+// Computed for max date (must be at least 16 years old for student)
+const maxDob = computed(() => {
+  const date = new Date()
+  date.setFullYear(date.getFullYear() - 16)
+  return date.toISOString().split('T')[0]
+})
+
 const academicStatuses = [
   { value: 'active', label: 'Active' },
   { value: 'suspended', label: 'Suspended' },
@@ -584,6 +591,7 @@ function getStatusClass(status: string) {
                   v-model="form.dob"
                   type="date"
                   required
+                  :max="maxDob"
                   :class="{ 'input-error': fieldErrors.dob }"
                   @input="clearFieldError('dob')"
                 />

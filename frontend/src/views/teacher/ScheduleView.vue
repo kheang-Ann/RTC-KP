@@ -206,8 +206,8 @@ async function loadSchedule() {
 
 .filter-group select:focus {
   outline: none;
-  border-color: #7c3aed;
-  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
 .schedule-wrapper {
@@ -238,7 +238,7 @@ async function loadSchedule() {
 }
 
 .day-header {
-  background: #7c3aed;
+  background: var(--color-primary);
   color: white;
   font-weight: 600;
   padding: 12px 8px;

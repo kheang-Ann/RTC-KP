@@ -310,7 +310,7 @@ function formatDate(dateStr: string) {
   border: none;
   cursor: pointer;
   font-size: 14px;
-  color: #6366f1;
+  color: var(--color-primary);
   padding: 0 2px;
 }
 

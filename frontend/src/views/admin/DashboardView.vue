@@ -259,7 +259,7 @@ function formatDate(dateStr?: string) {
 .course-code {
   font-size: 1.125rem;
   font-weight: bold;
-  color: var(--color-purple);
+  color: var(--color-primary);
 }
 
 .course-name {

@@ -655,8 +655,8 @@ function getDepartmentName(departmentId: number | undefined): string {
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-purple);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .image-upload {

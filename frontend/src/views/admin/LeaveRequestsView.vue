@@ -712,7 +712,7 @@ function formatDateTime(dateStr: string) {
 }
 
 .document-link {
-  color: var(--color-purple);
+  color: var(--color-primary);
   text-decoration: none;
 }
 
