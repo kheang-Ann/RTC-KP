@@ -178,6 +178,7 @@ function getDegreeColor(degreeType: string) {
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+      <div v-if="error" class="modal-error">{{ error }}</div>
       <div class="modal">
         <h2>{{ editingProgram ? 'Edit Program' : 'Create Program' }}</h2>
         <form @submit.prevent="saveProgram">
@@ -272,11 +273,24 @@ function getDegreeColor(degreeType: string) {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
   overflow-y: auto;
+  gap: 12px;
+}
+
+.modal-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 20px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  font-weight: 500;
 }
 
 .modal {

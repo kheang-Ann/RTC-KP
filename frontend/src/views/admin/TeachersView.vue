@@ -69,6 +69,7 @@ const form = ref({
   gender: 'male' as 'male' | 'female',
   dob: '',
   departmentId: undefined as number | undefined,
+  email: '', // Login email (readonly for edit)
   personalEmail: '',
   phoneNumbers: [''] as string[],
   password: '',
@@ -109,6 +110,7 @@ function resetForm() {
     gender: 'male',
     dob: '',
     departmentId: undefined,
+    email: '',
     personalEmail: '',
     phoneNumbers: [''],
     password: '',
@@ -132,6 +134,7 @@ function openEdit(teacher: Teacher) {
     gender: teacher.gender,
     dob: dobValue || '',
     departmentId: teacher.departmentId,
+    email: teacher.user?.email || '',
     personalEmail: teacher.personalEmail,
     phoneNumbers: teacher.phoneNumbers?.length ? [...teacher.phoneNumbers] : [''],
     password: '',
@@ -365,6 +368,7 @@ function getDepartmentName(departmentId: number | undefined): string {
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+      <div v-if="error" class="modal-error">{{ error }}</div>
       <div class="modal">
         <h2>{{ editingTeacher ? 'Edit Teacher' : 'Create Teacher' }}</h2>
         <form @submit.prevent="saveTeacher">
@@ -455,6 +459,17 @@ function getDepartmentName(departmentId: number | undefined): string {
           <!-- Contact Information -->
           <div class="form-section">
             <h3>📞 Contact Information</h3>
+            <div class="form-group" v-if="editingTeacher">
+              <label>Login Email</label>
+              <input
+                v-model="form.email"
+                type="email"
+                disabled
+                class="input-disabled"
+                placeholder="login@email.com"
+              />
+              <small class="field-hint">Login email cannot be changed</small>
+            </div>
             <div class="form-group">
               <label>Personal Email *</label>
               <input
@@ -566,11 +581,24 @@ function getDepartmentName(departmentId: number | undefined): string {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
   overflow-y: auto;
+  gap: 12px;
+}
+
+.modal-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 20px;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  font-weight: 500;
 }
 
 .modal {
@@ -722,5 +750,19 @@ function getDepartmentName(departmentId: number | undefined): string {
   font-size: 12px;
   margin-top: 4px;
   display: block;
+}
+
+.input-disabled {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  display: block;
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  font-style: italic;
 }
 </style>

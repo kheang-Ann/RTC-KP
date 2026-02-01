@@ -650,6 +650,7 @@ async function submitBulkYearUpdate() {
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+      <div v-if="error" class="modal-error">{{ error }}</div>
       <div class="modal modal-large">
         <h2>{{ editingStudent ? 'Edit Student' : 'Create Student' }}</h2>
         <form @submit.prevent="saveStudent">
@@ -777,13 +778,15 @@ async function submitBulkYearUpdate() {
               </div>
             </div>
             <div class="form-group" v-if="editingStudent">
-              <label>Login Email *</label>
+              <label>Login Email</label>
               <input
                 v-model="form.email"
                 type="email"
-                required
+                disabled
+                class="input-disabled"
                 placeholder="login@email.com"
               />
+              <small class="field-hint">Login email cannot be changed</small>
             </div>
           </div>
 
@@ -949,11 +952,24 @@ async function submitBulkYearUpdate() {
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   overflow-y: auto;
   padding: 20px;
+  gap: 12px;
+}
+
+.modal-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 20px;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  font-weight: 500;
 }
 
 .modal {
@@ -1083,6 +1099,20 @@ async function submitBulkYearUpdate() {
   color: #dc3545;
   font-size: 0.8rem;
   margin-top: 4px;
+}
+
+.input-disabled {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+  cursor: not-allowed;
+}
+
+.field-hint {
+  display: block;
+  color: #6b7280;
+  font-size: 0.75rem;
+  margin-top: 4px;
+  font-style: italic;
 }
 
 .form-group.has-error label {

@@ -1,5 +1,13 @@
-import { IsEnum, IsInt, IsNotEmpty, IsString, Min, MaxLength } from 'class-validator';
-import { Transform } from 'class-transformer';
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsString,
+  Min,
+  MaxLength,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { DegreeType } from '../entities/program.entity';
 
 export class CreateProgramDto {
@@ -9,6 +17,7 @@ export class CreateProgramDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   name: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   duration: number;
@@ -16,6 +25,7 @@ export class CreateProgramDto {
   @IsEnum(DegreeType)
   degreeType: DegreeType;
 
+  @Type(() => Number)
   @IsInt()
   departmentId: number;
 }
