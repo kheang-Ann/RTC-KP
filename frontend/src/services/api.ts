@@ -40,10 +40,17 @@ class ApiService {
       headers,
     })
 
-    // Handle 401 Unauthorized - session expired
+    // Handle 401 Unauthorized - only redirect if not on login page
     if (response.status === 401) {
-      this.handleUnauthorized()
-      throw new Error('Session expired. Please login again.')
+      // Don't redirect if we're on the login page (login failure)
+      const isLoginPage = window.location.pathname === '/login'
+      if (!isLoginPage) {
+        this.handleUnauthorized()
+        throw new Error('Session expired. Please login again.')
+      }
+      // For login failures, just throw the error message from API
+      const error = await response.json().catch(() => ({ message: 'Invalid email or password' }))
+      throw new Error(error.message || 'Invalid email or password')
     }
 
     if (!response.ok) {

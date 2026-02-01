@@ -1,16 +1,54 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { coursesService, type Course, type CreateCourseDto } from '@/services/courses'
 import { departmentsService, type Department } from '@/services/departments'
 import { usersService, type User } from '@/services/users'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const courses = ref<Course[]>([])
 const departments = ref<Department[]>([])
 const teachers = ref<User[]>([])
 const loading = ref(false)
 const error = ref('')
+const modalError = ref('')
 const showModal = ref(false)
 const editingCourse = ref<Course | null>(null)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref<string | null>(null)
+
+// Filters
+const searchQuery = ref('')
+const filterDepartment = ref<number | null>(null)
+const filterCredits = ref<number | null>(null)
+
+// Get unique credit values for filter
+const creditOptions = computed(() => {
+  const credits = [...new Set(courses.value.map(c => c.credits))]
+  return credits.sort((a, b) => a - b)
+})
+
+// Filtered courses
+const filteredCourses = computed(() => {
+  let result = courses.value
+  
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(c => 
+      c.name.toLowerCase().includes(query) || 
+      c.code.toLowerCase().includes(query)
+    )
+  }
+  
+  if (filterDepartment.value) {
+    result = result.filter(c => c.department?.id === filterDepartment.value)
+  }
+  
+  if (filterCredits.value) {
+    result = result.filter(c => c.credits === filterCredits.value)
+  }
+  
+  return result
+})
 
 const form = ref<CreateCourseDto>({
   name: '',
@@ -45,12 +83,14 @@ async function loadData() {
 
 function openCreate() {
   editingCourse.value = null
+  modalError.value = ''
   form.value = { name: '', code: '', credits: 3, departmentId: 0, teacherId: undefined }
   showModal.value = true
 }
 
 function openEdit(course: Course) {
   editingCourse.value = course
+  modalError.value = ''
   form.value = {
     name: course.name,
     code: course.code,
@@ -63,7 +103,7 @@ function openEdit(course: Course) {
 
 async function saveCourse() {
   loading.value = true
-  error.value = ''
+  modalError.value = ''
   try {
     if (editingCourse.value) {
       await coursesService.update(editingCourse.value.id, form.value)
@@ -73,37 +113,72 @@ async function saveCourse() {
     showModal.value = false
     await loadData()
   } catch (e) {
-    error.value = (e as Error).message
+    modalError.value = (e as Error).message
   } finally {
     loading.value = false
   }
 }
 
-async function deleteCourse(id: string) {
-  if (!confirm('Are you sure you want to delete this course?')) return
+function deleteCourse(id: string) {
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTargetId.value === null) return
+  showDeleteConfirm.value = false
   loading.value = true
   try {
-    await coursesService.delete(id)
+    await coursesService.delete(deleteTargetId.value)
     await loadData()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    deleteTargetId.value = null
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
 }
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Courses Management</h1>
+  <div class="page-container">
+    <div class="page-header-row">
+      <h1 class="page-title">Courses Management</h1>
       <button class="btn btn-primary" @click="openCreate">+ Add Course</button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
-    <table class="table" v-if="courses.length">
+    <!-- Filters -->
+    <div class="page-filters">
+      <div class="filter-group">
+        <label>Search</label>
+        <input v-model="searchQuery" type="text" placeholder="Search by name or code..." />
+      </div>
+      <div class="filter-group">
+        <label>Department</label>
+        <select v-model="filterDepartment">
+          <option :value="null">All Departments</option>
+          <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Credits</label>
+        <select v-model="filterCredits">
+          <option :value="null">All Credits</option>
+          <option v-for="credit in creditOptions" :key="credit" :value="credit">{{ credit }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div v-if="loading" class="page-loading">Loading...</div>
+
+    <table class="page-table" v-if="filteredCourses.length">
       <thead>
         <tr>
           <th>Code</th>
@@ -115,26 +190,28 @@ async function deleteCourse(id: string) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="course in courses" :key="course.id">
+        <tr v-for="course in filteredCourses" :key="course.id">
           <td>{{ course.code }}</td>
           <td>{{ course.name }}</td>
           <td>{{ course.credits }}</td>
           <td>{{ course.department?.name || '-' }}</td>
           <td>{{ course.teacher ? (course.teacher.nameLatin || course.teacher.nameKhmer || '-') : '-' }}</td>
           <td>
-            <button class="btn btn-sm" @click="openEdit(course)">Edit</button>
+            <button class="btn btn-sm btn-secondary" @click="openEdit(course)">Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteCourse(course.id)">Delete</button>
           </td>
         </tr>
       </tbody>
     </table>
 
-    <div v-else-if="!loading" class="empty">No courses found. Create your first course!</div>
+    <div v-else-if="!loading && courses.length" class="page-empty">No courses match your filters.</div>
+    <div v-else-if="!loading" class="page-empty">No courses found. Create your first course!</div>
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal">
         <h2>{{ editingCourse ? 'Edit Course' : 'Create Course' }}</h2>
+        <div v-if="modalError" class="page-alert page-alert-error">{{ modalError }}</div>
         <form @submit.prevent="saveCourse">
           <div class="form-group">
             <label>Course Code</label>
@@ -165,7 +242,7 @@ async function deleteCourse(id: string) {
             </select>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">
               {{ editingCourse ? 'Update' : 'Create' }}
             </button>
@@ -174,72 +251,18 @@ async function deleteCourse(id: string) {
       </div>
     </div>
   </div>
+
+  <ConfirmDialog
+    :show="showDeleteConfirm"
+    title="Delete Course"
+    message="Are you sure you want to delete this course? This action cannot be undone."
+    @confirm="confirmDelete"
+    @cancel="cancelDelete"
+  />
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-
-.table tr:hover {
-  background: #fafafa;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  background: white;
-}
-
-.btn-primary {
-  background: var(--color-purple);
-  color: white;
-  border-color: var(--color-purple);
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-  border-color: var(--color-light-red);
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  margin-right: 4px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -250,6 +273,9 @@ async function deleteCourse(id: string) {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
@@ -258,6 +284,13 @@ async function deleteCourse(id: string) {
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
 }
 
 .form-group {
@@ -284,22 +317,5 @@ async function deleteCourse(id: string) {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 20px;
-}
-
-.alert-error {
-  padding: 12px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
 }
 </style>

@@ -9,6 +9,7 @@ import {
 import { coursesService, type Course } from '@/services/courses'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const sessions = ref<Session[]>([])
 const courses = ref<Course[]>([])
@@ -21,6 +22,8 @@ const loading = ref(false)
 const error = ref('')
 const successMessage = ref('')
 const showModal = ref(false)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref<string | null>(null)
 const showCodeModal = ref(false)
 const activeSession = ref<Session | null>(null)
 const editingSession = ref<Session | null>(null)
@@ -182,11 +185,17 @@ async function regenerateCode(session: Session) {
   }
 }
 
-async function deleteSession(id: string) {
-  if (!confirm('Are you sure you want to delete this session?')) return
+function deleteSession(id: string) {
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTargetId.value === null) return
+  showDeleteConfirm.value = false
   loading.value = true
   try {
-    await sessionsService.delete(id)
+    await sessionsService.delete(deleteTargetId.value)
     successMessage.value = 'Session deleted!'
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
@@ -194,7 +203,13 @@ async function deleteSession(id: string) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    deleteTargetId.value = null
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
 }
 
 function showCode(session: Session) {
@@ -226,17 +241,17 @@ function getStatusLabel(status: SessionStatus) {
 </script>
 
 <template>
-  <div class="sessions-view">
-    <div class="header">
-      <h1>Sessions Management</h1>
+  <div class="page-container">
+    <div class="page-header-row">
+      <h1 class="page-title">Sessions Management</h1>
       <button class="btn btn-primary" @click="openCreate">+ Create Session</button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="successMessage" class="page-alert page-alert-success">{{ successMessage }}</div>
 
     <!-- Filter -->
-    <div class="filters">
+    <div class="page-filters">
       <div class="filter-group">
         <label>Filter by Department</label>
         <select v-model="selectedDepartment">
@@ -266,10 +281,10 @@ function getStatusLabel(status: SessionStatus) {
       </div>
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <!-- Sessions Table -->
-    <table class="table" v-if="filteredSessions.length">
+    <table class="page-table" v-if="filteredSessions.length">
       <thead>
         <tr>
           <th>Title</th>
@@ -326,7 +341,7 @@ function getStatusLabel(status: SessionStatus) {
             >
               New Code
             </button>
-            <button class="btn btn-sm" @click="openEdit(session)">Edit</button>
+            <button class="btn btn-sm btn-secondary" @click="openEdit(session)">Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteSession(session.id)">
               Delete
             </button>
@@ -335,7 +350,7 @@ function getStatusLabel(status: SessionStatus) {
       </tbody>
     </table>
 
-    <div v-else-if="!loading" class="empty">No sessions found.</div>
+    <div v-else-if="!loading" class="page-empty">No sessions found.</div>
 
     <!-- Create/Edit Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -377,7 +392,7 @@ function getStatusLabel(status: SessionStatus) {
             </div>
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">
               {{ editingSession ? 'Update' : 'Create' }}
             </button>
@@ -400,143 +415,30 @@ function getStatusLabel(status: SessionStatus) {
         </div>
         <p class="code-instruction">Share this code with students to check in</p>
         <div class="modal-actions">
-          <button class="btn" @click="showCodeModal = false">Close</button>
+          <button class="btn btn-secondary" @click="showCodeModal = false">Close</button>
           <button class="btn btn-primary" @click="regenerateCode(activeSession)">
             Regenerate Code
           </button>
         </div>
       </div>
     </div>
+
+    <ConfirmDialog
+      :show="showDeleteConfirm"
+      title="Delete Session"
+      message="Are you sure you want to delete this session? This action cannot be undone."
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
 <style scoped>
-.sessions-view {
-  padding: 20px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.filters {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: #374151;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  min-width: 200px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-
-.table tr:hover {
-  background: #fafafa;
-}
-
+/* Session-specific action buttons */
 .actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  background: #e5e7eb;
-  color: #374151;
-  transition: background-color 0.2s;
-}
-
-.btn:hover {
-  background: #d1d5db;
-}
-
-.btn-primary {
-  background: var(--color-purple);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: #4338ca;
-}
-
-.btn-success {
-  background: #10b981;
-  color: white;
-}
-
-.btn-success:hover {
-  background: #059669;
-}
-
-.btn-warning {
-  background: #f59e0b;
-  color: white;
-}
-
-.btn-warning:hover {
-  background: #d97706;
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-}
-
-.btn-danger:hover {
-  background: #dc2626;
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  font-size: 12px;
 }
 
 .btn-code {
@@ -550,6 +452,7 @@ function getStatusLabel(status: SessionStatus) {
   background: #7c3aed;
 }
 
+/* Status badges */
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -581,33 +484,7 @@ function getStatusLabel(status: SessionStatus) {
   color: #9ca3af;
 }
 
-.alert {
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-}
-
-.alert-error {
-  background: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fcc;
-}
-
-.alert-success {
-  background: #d1fae5;
-  color: #065f46;
-  border: 1px solid #cfc;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -619,6 +496,8 @@ function getStatusLabel(status: SessionStatus) {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
@@ -627,12 +506,31 @@ function getStatusLabel(status: SessionStatus) {
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
-  max-height: 90vh;
+  max-height: calc(100vh - 40px);
   overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
 }
 
 .modal h2 {
   margin: 0 0 20px 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+/* Form styles */
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-group {
@@ -667,13 +565,7 @@ function getStatusLabel(status: SessionStatus) {
   gap: 16px;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
+/* Attendance code modal */
 .code-modal {
   text-align: center;
 }

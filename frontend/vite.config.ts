@@ -19,6 +19,6 @@ export default defineConfig({
   server: {
     host: true,
     port: 5174,
-    https: true, // Enable HTTPS
+    // HTTPS is handled by basicSsl plugin
   },
 })

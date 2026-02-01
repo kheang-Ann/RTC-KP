@@ -36,7 +36,7 @@ export class Session {
   @Column({ type: 'uuid' })
   courseId: string;
 
-  @ManyToOne(() => Course, { nullable: false })
+  @ManyToOne(() => Course, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'courseId' })
   course: Course;
 

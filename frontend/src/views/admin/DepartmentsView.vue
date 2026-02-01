@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { departmentsService, type Department, type CreateDepartmentDto } from '@/services/departments'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const departments = ref<Department[]>([])
 const loading = ref(false)
 const error = ref('')
 const showModal = ref(false)
+const showDeleteConfirm = ref(false)
+const deleteTargetId = ref<number | null>(null)
 
 const form = ref<CreateDepartmentDto>({
   name: '',
@@ -46,31 +49,43 @@ async function createDepartment() {
   }
 }
 
-async function deleteDepartment(id: number) {
-  if (!confirm('Are you sure you want to delete this department?')) return
+function deleteDepartment(id: number) {
+  deleteTargetId.value = id
+  showDeleteConfirm.value = true
+}
+
+async function confirmDelete() {
+  if (deleteTargetId.value === null) return
+  showDeleteConfirm.value = false
   loading.value = true
   try {
-    await departmentsService.delete(id)
+    await departmentsService.delete(deleteTargetId.value)
     await loadData()
   } catch (e) {
     error.value = (e as Error).message
   } finally {
     loading.value = false
+    deleteTargetId.value = null
   }
+}
+
+function cancelDelete() {
+  showDeleteConfirm.value = false
+  deleteTargetId.value = null
 }
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Departments Management</h1>
+  <div class="page-container">
+    <div class="page-header-row">
+      <h1 class="page-title">Departments Management</h1>
       <button class="btn btn-primary" @click="openCreate">+ Add Department</button>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
-    <table class="table" v-if="departments.length">
+    <table class="page-table" v-if="departments.length">
       <thead>
         <tr>
           <th>ID</th>
@@ -89,7 +104,7 @@ async function deleteDepartment(id: number) {
       </tbody>
     </table>
 
-    <div v-else-if="!loading" class="empty">No departments found. Create your first department!</div>
+    <div v-else-if="!loading" class="page-empty">No departments found. Create your first department!</div>
 
     <!-- Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
@@ -101,79 +116,25 @@ async function deleteDepartment(id: number) {
             <input v-model="form.name" type="text" required placeholder="e.g., Computer Science" />
           </div>
           <div class="modal-actions">
-            <button type="button" class="btn" @click="showModal = false">Cancel</button>
+            <button type="button" class="btn btn-secondary" @click="showModal = false">Cancel</button>
             <button type="submit" class="btn btn-primary" :disabled="loading">Create</button>
           </div>
         </form>
       </div>
     </div>
+
+    <ConfirmDialog
+      :show="showDeleteConfirm"
+      title="Delete Department"
+      message="Are you sure you want to delete this department? This action cannot be undone."
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-
-.table tr:hover {
-  background: #fafafa;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  background: white;
-}
-
-.btn-primary {
-  background: var(--color-purple);
-  color: white;
-  border-color: var(--color-purple);
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-  border-color: var(--color-light-red);
-}
-
-.btn-sm {
-  padding: 4px 8px;
-  margin-right: 4px;
-}
-
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -184,6 +145,9 @@ async function deleteDepartment(id: number) {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  overflow-y: auto;
 }
 
 .modal {
@@ -192,6 +156,13 @@ async function deleteDepartment(id: number) {
   border-radius: 8px;
   width: 100%;
   max-width: 500px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.modal * {
+  box-sizing: border-box;
 }
 
 .form-group {
@@ -210,6 +181,7 @@ async function deleteDepartment(id: number) {
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 .modal-actions {
@@ -217,22 +189,5 @@ async function deleteDepartment(id: number) {
   gap: 8px;
   justify-content: flex-end;
   margin-top: 20px;
-}
-
-.alert-error {
-  padding: 12px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
 }
 </style>

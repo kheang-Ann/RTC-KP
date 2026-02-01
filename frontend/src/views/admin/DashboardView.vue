@@ -3,13 +3,11 @@ import { ref, onMounted, computed } from 'vue'
 import { usersService, type User, hasRole } from '@/services/users'
 import { coursesService, type Course } from '@/services/courses'
 import { departmentsService, type Department } from '@/services/departments'
-import { enrollmentsService, type Enrollment } from '@/services/enrollments'
 import { authService } from '@/services/auth'
 
 const users = ref<User[]>([])
 const courses = ref<Course[]>([])
 const departments = ref<Department[]>([])
-const enrollments = ref<Enrollment[]>([])
 const loading = ref(false)
 const error = ref('')
 
@@ -22,7 +20,6 @@ const stats = computed(() => {
   const totalAdmins = users.value.filter((u) => hasRole(u, 'admin')).length
   const totalCourses = courses.value.length
   const totalDepartments = departments.value.length
-  const totalEnrollments = enrollments.value.length
 
   return {
     totalUsers,
@@ -31,19 +28,12 @@ const stats = computed(() => {
     totalAdmins,
     totalCourses,
     totalDepartments,
-    totalEnrollments,
   }
 })
 
 const recentUsers = computed(() => {
   return [...users.value]
     .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
-    .slice(0, 5)
-})
-
-const recentEnrollments = computed(() => {
-  return [...enrollments.value]
-    .sort((a, b) => new Date(b.enrolledAt).getTime() - new Date(a.enrolledAt).getTime())
     .slice(0, 5)
 })
 
@@ -55,16 +45,14 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [usersData, coursesData, departmentsData, enrollmentsData] = await Promise.all([
+    const [usersData, coursesData, departmentsData] = await Promise.all([
       usersService.getAll(),
       coursesService.getAll(),
       departmentsService.getAll(),
-      enrollmentsService.getAll(),
     ])
     users.value = usersData
     courses.value = coursesData
     departments.value = departmentsData
-    enrollments.value = enrollmentsData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -83,17 +71,19 @@ function formatDate(dateStr?: string) {
 </script>
 
 <template>
-  <div class="admin-dashboard">
-    <h1>Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
-    <p class="subtitle">Admin Dashboard</p>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">Welcome, {{ user?.nameLatin || user?.nameKhmer || user?.email }}</h1>
+      <p class="page-subtitle">Admin Dashboard</p>
+    </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <template v-else>
       <!-- Stats Cards -->
-      <div class="stats-grid">
+      <div class="page-stats-grid">
         <div class="stat-card border-left-blue">
           <div class="stat-value">{{ stats.totalUsers }}</div>
           <div class="stat-label">Total Users</div>
@@ -114,15 +104,11 @@ function formatDate(dateStr?: string) {
           <div class="stat-value">{{ stats.totalDepartments }}</div>
           <div class="stat-label">Departments</div>
         </div>
-        <div class="stat-card border-left-lightpurple">
-          <div class="stat-value">{{ stats.totalEnrollments }}</div>
-          <div class="stat-label">Enrollments</div>
-        </div>
       </div>
 
       <!-- Quick Actions -->
-      <div class="section">
-        <h2>Quick Actions</h2>
+      <div class="page-section">
+        <h2 class="section-title">Quick Actions</h2>
         <div class="quick-actions">
           <router-link to="/admin/students" class="action-card">
             <span class="action-icon">👨‍🎓</span>
@@ -148,10 +134,6 @@ function formatDate(dateStr?: string) {
             <span class="action-icon">📅</span>
             <span class="action-label">Manage Sessions</span>
           </router-link>
-          <router-link to="/admin/enrollments" class="action-card">
-            <span class="action-icon">📋</span>
-            <span class="action-label">Manage Enrollments</span>
-          </router-link>
           <router-link to="/admin/attendance" class="action-card">
             <span class="action-icon">✅</span>
             <span class="action-label">Manage Attendance</span>
@@ -163,11 +145,11 @@ function formatDate(dateStr?: string) {
         </div>
       </div>
 
-      <!-- Recent Users & Enrollments -->
+      <!-- Recent Users & Courses -->
       <div class="two-columns">
-        <div class="section">
-          <h2>Recent Users</h2>
-          <table v-if="recentUsers.length" class="table">
+        <div class="page-section">
+          <h2 class="section-title">Recent Users</h2>
+          <table v-if="recentUsers.length" class="page-table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -183,35 +165,35 @@ function formatDate(dateStr?: string) {
               </tr>
             </tbody>
           </table>
-          <div v-else class="empty">No users yet.</div>
+          <div v-else class="page-empty">No users yet.</div>
         </div>
 
-        <div class="section">
-          <h2>Recent Enrollments</h2>
-          <table v-if="recentEnrollments.length" class="table">
+        <div class="page-section">
+          <h2 class="section-title">Recent Courses</h2>
+          <table v-if="courses.length" class="page-table">
             <thead>
               <tr>
-                <th>Student</th>
-                <th>Course</th>
-                <th>Date</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Credits</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="enrollment in recentEnrollments" :key="enrollment.id">
-                <td>{{ enrollment.student?.nameLatin || enrollment.student?.nameKhmer || '-' }}</td>
-                <td>{{ enrollment.course?.code || enrollment.course?.name }}</td>
-                <td>{{ formatDate(enrollment.enrolledAt) }}</td>
+              <tr v-for="course in courses.slice(0, 5)" :key="course.id">
+                <td>{{ course.code || '-' }}</td>
+                <td>{{ course.name }}</td>
+                <td>{{ course.credits }}</td>
               </tr>
             </tbody>
           </table>
-          <div v-else class="empty">No enrollments yet.</div>
+          <div v-else class="page-empty">No courses yet.</div>
         </div>
       </div>
 
       <!-- System Overview -->
-      <div class="section">
-        <h2>Courses Overview</h2>
-        <div v-if="courses.length" class="courses-grid">
+      <div class="page-section">
+        <h2 class="section-title">Courses Overview</h2>
+        <div v-if="courses.length" class="page-cards-grid">
           <div v-for="course in courses.slice(0, 6)" :key="course.id" class="course-card">
             <div class="course-code">{{ course.code || course.name }}</div>
             <div class="course-name">{{ course.name }}</div>
@@ -221,63 +203,13 @@ function formatDate(dateStr?: string) {
             </div>
           </div>
         </div>
-        <div v-else class="empty">No courses yet.</div>
+        <div v-else class="page-empty">No courses yet.</div>
       </div>
     </template>
   </div>
 </template>
 
 <style scoped>
-.admin-dashboard {
-  padding: 1rem;
-}
-
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  color: var(--color-grey);
-  margin-bottom: 1.5rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.stat-card {
-  background: white;
-  border-radius: 8px;
-  padding: 1.25rem;
-  text-align: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.stat-value {
-  font-size: 2rem;
-  font-weight: bold;
-  color: var(--color-dark-grey);
-}
-
-.stat-label {
-  color: var(--color-grey);
-  font-size: 0.875rem;
-  margin-top: 0.25rem;
-}
-
-.section {
-  margin-bottom: 2rem;
-}
-
-.section h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: var(--color-dark-grey);
-}
-
 .two-columns {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -297,7 +229,7 @@ h1 {
   text-align: center;
   text-decoration: none;
   color: var(--color-dark-grey);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -317,17 +249,11 @@ h1 {
   font-size: 0.875rem;
 }
 
-.courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
-
 .course-card {
   background: white;
   border-radius: 8px;
   padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .course-code {
@@ -345,52 +271,5 @@ h1 {
   color: #888;
   font-size: 0.75rem;
   margin-top: 0.5rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-  font-size: 0.875rem;
-}
-
-.table td {
-  font-size: 0.875rem;
-}
-
-.alert {
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: #ffebee;
-  color: #c62828;
-  border: 1px solid #ffcdd2;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
 }
 </style>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { attendanceService, type Attendance } from '@/services/attendance'
-import { enrollmentsService, type Enrollment } from '@/services/enrollments'
+import { schedulesService, type Schedule } from '@/services/schedules'
+import { authService } from '@/services/auth'
 
 const attendances = ref<Attendance[]>([])
-const enrollments = ref<Enrollment[]>([])
+const schedules = ref<Schedule[]>([])
 const selectedCourse = ref<string>('')
 const loading = ref(false)
 const error = ref('')
@@ -26,6 +27,8 @@ const stats = computed(() => {
   return { total, present, late, absent, excused, attendanceRate }
 })
 
+const user = computed(() => authService.getUser())
+
 onMounted(async () => {
   await loadData()
 })
@@ -34,12 +37,12 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [attendancesData, enrollmentsData] = await Promise.all([
+    const [attendancesData, schedulesData] = await Promise.all([
       attendanceService.getMyAttendance(),
-      enrollmentsService.getMyEnrollments(),
+      schedulesService.getMySchedule(1), // Default to semester 1
     ])
     attendances.value = attendancesData
-    enrollments.value = enrollmentsData
+    schedules.value = schedulesData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -77,20 +80,22 @@ function formatTime(dateStr?: string) {
 
 function getCourseName(courseId?: string) {
   if (!courseId) return '-'
-  const enrollment = enrollments.value.find((e) => e.courseId === courseId)
-  return enrollment?.course?.name || courseId
+  const schedule = schedules.value.find((s) => s.courseId === courseId)
+  return schedule?.course?.name || courseId
 }
 </script>
 
 <template>
-  <div class="attendance-history">
-    <h1>My Attendance</h1>
-    <p class="subtitle">View your attendance history across all courses</p>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">My Attendance</h1>
+      <p class="page-subtitle">View your attendance history across all courses</p>
+    </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
     <!-- Stats Cards -->
-    <div class="stats-grid">
+    <div class="page-stats-grid">
       <div class="stat-card border-left-lightblue">
         <div class="stat-value">{{ stats.attendanceRate }}%</div>
         <div class="stat-label">Attendance Rate</div>
@@ -114,22 +119,22 @@ function getCourseName(courseId?: string) {
     </div>
 
     <!-- Filter -->
-    <div class="filters">
+    <div class="page-filters">
       <div class="filter-group">
         <label>Filter by Course</label>
         <select v-model="selectedCourse">
           <option value="">All Courses</option>
-          <option v-for="enrollment in enrollments" :key="enrollment.id" :value="enrollment.courseId">
-            {{ enrollment.course?.code || enrollment.course?.name }} - {{ enrollment.course?.name }}
+          <option v-for="schedule in schedules.filter((s, i, arr) => arr.findIndex(x => x.courseId === s.courseId) === i)" :key="schedule.id" :value="schedule.courseId">
+            {{ schedule.course?.code || schedule.course?.name }} - {{ schedule.course?.name }}
           </option>
         </select>
       </div>
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <!-- Attendance Table -->
-    <table v-else-if="filteredAttendances.length" class="table">
+    <table v-else-if="filteredAttendances.length" class="page-table">
       <thead>
         <tr>
           <th>Date</th>
@@ -154,7 +159,7 @@ function getCourseName(courseId?: string) {
       </tbody>
     </table>
 
-    <div v-else class="empty">
+    <div v-else class="page-empty">
       <p>No attendance records found.</p>
       <router-link to="/student/check-in" class="btn btn-primary">Check In Now</router-link>
     </div>
@@ -162,26 +167,7 @@ function getCourseName(courseId?: string) {
 </template>
 
 <style scoped>
-.attendance-history {
-  padding: 1rem;
-}
-
-h1 {
-  margin-bottom: 0.25rem;
-}
-
-.subtitle {
-  color: var(--color-grey);
-  margin-bottom: 1.5rem;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
+/* View-specific styles */
 .stat-card {
   background: white;
   border-radius: 8px;
@@ -202,58 +188,11 @@ h1 {
   margin-top: 0.25rem;
 }
 
-.stat-success .stat-value { color: #28a745; }
-
-.filters {
-  background: white;
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.stat-success {
+  border-left: 4px solid #22c55e;
 }
 
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.filter-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.filter-group select {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f8f9fa;
-  font-weight: 600;
-}
-
-.table tbody tr:hover {
-  background: #f8f9fa;
-}
+.stat-success .stat-value { color: #22c55e; }
 
 .status-badge {
   padding: 0.25rem 0.5rem;
@@ -267,19 +206,6 @@ h1 {
 .status-late { background: #fff3cd; color: #856404; }
 .status-absent { background: #f8d7da; color: #721c24; }
 .status-excused { background: #cce5ff; color: #004085; }
-
-.empty {
-  text-align: center;
-  padding: 3rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.empty p {
-  margin-bottom: 1rem;
-  color: var(--color-grey);
-}
 
 .btn {
   padding: 0.5rem 1rem;
@@ -299,21 +225,5 @@ h1 {
 
 .btn-primary:hover {
   background: #0056b3;
-}
-
-.loading {
-  text-align: center;
-  padding: 2rem;
-}
-
-.alert {
-  padding: 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-}
-
-.alert-error {
-  background: #f8d7da;
-  color: #721c24;
 }
 </style>

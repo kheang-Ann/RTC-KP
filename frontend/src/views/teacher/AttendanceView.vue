@@ -8,7 +8,8 @@ import {
 } from '@/services/attendance'
 import { sessionsService, type Session } from '@/services/sessions'
 import { coursesService, type Course } from '@/services/courses'
-import { enrollmentsService, type Enrollment } from '@/services/enrollments'
+import { schedulesService, type Schedule } from '@/services/schedules'
+import { groupsService, type AvailableStudent } from '@/services/groups'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
 import { isValidRemarks } from '@/utils/validation'
@@ -16,7 +17,8 @@ import { isValidRemarks } from '@/utils/validation'
 const attendances = ref<Attendance[]>([])
 const sessions = ref<Session[]>([])
 const courses = ref<Course[]>([])
-const enrollments = ref<Enrollment[]>([])
+const schedules = ref<Schedule[]>([])
+const enrolledStudents = ref<AvailableStudent[]>([])
 const departments = ref<Department[]>([])
 const programs = ref<Program[]>([])
 const selectedDepartment = ref<number | null>(null)
@@ -61,11 +63,6 @@ watch(selectedProgram, () => {
   attendances.value = []
 })
 
-const enrolledStudents = computed(() => {
-  if (!selectedCourse.value) return []
-  return enrollments.value.filter((e) => e.courseId === selectedCourse.value)
-})
-
 onMounted(async () => {
   await loadInitialData()
 })
@@ -74,15 +71,17 @@ async function loadInitialData() {
   loading.value = true
   error.value = ''
   try {
-    // Load only teacher's assigned courses
-    const [coursesData, sessionsData, departmentsData, programsData] = await Promise.all([
+    // Load only teacher's assigned courses and schedules
+    const [coursesData, sessionsData, schedulesData, departmentsData, programsData] = await Promise.all([
       coursesService.getMyCourses(),
       sessionsService.getAll(),
+      schedulesService.getMyTeachingSchedule(1), // Default to semester 1
       departmentsService.getAll(),
       programsService.getAll(),
     ])
     courses.value = coursesData
     sessions.value = sessionsData
+    schedules.value = schedulesData
     departments.value = departmentsData
     programs.value = programsData
   } catch (e) {
@@ -95,9 +94,22 @@ async function loadInitialData() {
 async function onCourseChange() {
   selectedSession.value = ''
   attendances.value = []
+  enrolledStudents.value = []
   if (selectedCourse.value) {
     try {
-      enrollments.value = await enrollmentsService.getByCourse(selectedCourse.value)
+      // Get schedules for this course to find groups
+      const courseSchedules = schedules.value.filter(s => s.courseId === selectedCourse.value)
+      const groupIds = [...new Set(courseSchedules.map(s => s.groupId))]
+      
+      // Fetch students from all groups
+      const studentsPromises = groupIds.map(groupId => groupsService.getStudentsInGroup(groupId))
+      const studentsArrays = await Promise.all(studentsPromises)
+      
+      // Flatten and deduplicate
+      const allStudents = studentsArrays.flat()
+      enrolledStudents.value = Array.from(
+        new Map(allStudents.map(s => [s.id, s])).values()
+      )
     } catch (e) {
       error.value = (e as Error).message
     }
@@ -116,10 +128,10 @@ async function loadAttendance() {
 
     // Initialize bulk attendances for students not yet marked
     bulkAttendances.value = {}
-    for (const enrollment of enrolledStudents.value) {
-      const existing = attendances.value.find((a) => a.studentId === enrollment.studentId)
+    for (const student of enrolledStudents.value) {
+      const existing = attendances.value.find((a) => a.studentId === student.id)
       if (!existing) {
-        bulkAttendances.value[enrollment.studentId] = { status: 'present', remarks: '' }
+        bulkAttendances.value[student.id] = { status: 'present', remarks: '' }
       }
     }
   } catch (e) {
@@ -220,16 +232,16 @@ function hasValidationErrors(): boolean {
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Manage Attendance</h1>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">Manage Attendance</h1>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
-    <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
+    <div v-if="successMessage" class="page-alert page-alert-success">{{ successMessage }}</div>
 
     <!-- Filters -->
-    <div class="filters">
+    <div class="page-filters">
       <div class="filter-group">
         <label>Select Department</label>
         <select v-model="selectedDepartment">
@@ -268,12 +280,12 @@ function hasValidationErrors(): boolean {
       </div>
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <!-- Existing Attendance Records -->
-    <div v-if="attendances.length && selectedSession" class="section">
-      <h2>Current Attendance Records</h2>
-      <table class="table">
+    <div v-if="attendances.length && selectedSession" class="page-section">
+      <h2 class="section-title">Current Attendance Records</h2>
+      <table class="page-table">
         <thead>
           <tr>
             <th>Student</th>
@@ -305,8 +317,8 @@ function hasValidationErrors(): boolean {
     </div>
 
     <!-- Mark Attendance for Unmarked Students -->
-    <div v-if="Object.keys(bulkAttendances).length && selectedSession" class="section">
-      <h2>Mark Attendance for Remaining Students</h2>
+    <div v-if="Object.keys(bulkAttendances).length && selectedSession" class="page-section">
+      <h2 class="section-title">Mark Attendance for Remaining Students</h2>
       <div class="bulk-actions">
         <span>Quick mark all as:</span>
         <button
@@ -319,7 +331,7 @@ function hasValidationErrors(): boolean {
           {{ status.charAt(0).toUpperCase() + status.slice(1) }}
         </button>
       </div>
-      <table class="table">
+      <table class="page-table">
         <thead>
           <tr>
             <th>Student</th>
@@ -328,14 +340,14 @@ function hasValidationErrors(): boolean {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="enrollment in enrolledStudents" :key="enrollment.studentId">
-            <template v-if="bulkAttendances[enrollment.studentId]">
-              <td>{{ enrollment.student?.nameLatin || enrollment.student?.nameKhmer || '-' }}</td>
+          <tr v-for="student in enrolledStudents" :key="student.id">
+            <template v-if="bulkAttendances[student.id]">
+              <td>{{ student.nameLatin || student.nameKhmer || '-' }}</td>
               <td>
                 <select
-                  v-model="bulkAttendances[enrollment.studentId].status"
+                  v-model="bulkAttendances[student.id]!.status"
                   class="status-select"
-                  :class="getStatusClass(bulkAttendances[enrollment.studentId].status)"
+                  :class="getStatusClass(bulkAttendances[student.id]!.status)"
                 >
                   <option v-for="status in statuses" :key="status" :value="status">
                     {{ status.charAt(0).toUpperCase() + status.slice(1) }}
@@ -344,15 +356,15 @@ function hasValidationErrors(): boolean {
               </td>
               <td>
                 <input
-                  v-model="bulkAttendances[enrollment.studentId].remarks"
+                  v-model="bulkAttendances[student.id]!.remarks"
                   type="text"
                   placeholder="Optional remarks (max 500 chars)"
                   class="remarks-input"
-                  :class="{ 'input-error': getRemarksError(enrollment.studentId) }"
+                  :class="{ 'input-error': getRemarksError(student.id) }"
                   maxlength="500"
                 />
-                <span v-if="getRemarksError(enrollment.studentId)" class="field-error">
-                  {{ getRemarksError(enrollment.studentId) }}
+                <span v-if="getRemarksError(student.id)" class="field-error">
+                  {{ getRemarksError(student.id) }}
                 </span>
               </td>
             </template>
@@ -373,82 +385,22 @@ function hasValidationErrors(): boolean {
       </div>
     </div>
 
-    <div v-else-if="selectedSession && !loading && !attendances.length" class="empty">
+    <div v-else-if="selectedSession && !loading && !attendances.length" class="page-empty">
       No enrolled students found for this course.
     </div>
-    <div v-else-if="!selectedSession && !loading" class="empty">
+    <div v-else-if="!selectedSession && !loading" class="page-empty">
       Select a course and session to manage attendance.
     </div>
   </div>
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  margin-bottom: 20px;
-}
-
-.section {
-  margin-top: 30px;
-}
-
-.section h2 {
-  font-size: 18px;
-  margin-bottom: 16px;
-}
-
-.filters {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-group label {
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 250px;
-}
-
+/* View-specific styles */
 .bulk-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 16px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  padding: 12px;
-  text-align: left;
-  border-bottom: 1px solid #ddd;
-}
-
-.table th {
-  background-color: #f5f5f5;
-  font-weight: 600;
 }
 
 .status-select {
@@ -503,52 +455,11 @@ function hasValidationErrors(): boolean {
   color: #1e40af;
 }
 
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  background: white;
-}
-
-.btn-primary {
-  background: var(--color-purple);
-  color: white;
-  border-color: var(--color-purple);
-}
-
-.btn-sm {
-  padding: 4px 12px;
-}
-
 .submit-section {
   margin-top: 20px;
   display: flex;
   justify-content: flex-end;
   align-items: center;
   gap: 12px;
-}
-
-.alert-error {
-  padding: 12px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.alert-success {
-  padding: 12px;
-  background: #d1fae5;
-  color: #065f46;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 40px;
-  color: var(--color-grey);
 }
 </style>

@@ -8,13 +8,14 @@ import { UserModule } from './modules/users/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DepartmentModule } from './modules/departments/department.module';
 import { CourseModule } from './modules/courses/course.module';
-import { EnrollmentModule } from './modules/enrollments/enrollment.module';
 import { SessionsModule } from './modules/sessions/sessions.module';
 import { AttendancesModule } from './modules/attendances/attendances.module';
 import { LeaveRequestsModule } from './modules/leave-requests/leave-requests.module';
 import { ProgramModule } from './modules/programs/program.module';
 import { StudentModule } from './modules/students/student.module';
 import { TeacherModule } from './modules/teachers/teacher.module';
+import { GroupModule } from './modules/groups/group.module';
+import { ScheduleModule } from './modules/schedules/schedule.module';
 
 @Module({
   imports: [
@@ -37,13 +38,14 @@ import { TeacherModule } from './modules/teachers/teacher.module';
     UserModule,
     DepartmentModule,
     CourseModule,
-    EnrollmentModule,
     SessionsModule,
     AttendancesModule,
     LeaveRequestsModule,
     ProgramModule,
     StudentModule,
     TeacherModule,
+    GroupModule,
+    ScheduleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

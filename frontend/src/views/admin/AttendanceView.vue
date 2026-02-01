@@ -98,15 +98,15 @@ function formatDate(dateStr: string) {
 </script>
 
 <template>
-  <div class="container">
-    <div class="header">
-      <h1>Attendance Management</h1>
+  <div class="page-container">
+    <div class="page-header">
+      <h1 class="page-title">Attendance Management</h1>
     </div>
 
-    <div v-if="error" class="alert alert-error">{{ error }}</div>
+    <div v-if="error" class="page-alert page-alert-error">{{ error }}</div>
 
     <!-- Filters -->
-    <div class="filters">
+    <div class="page-filters">
       <div class="filter-group">
         <label>Course</label>
         <select v-model="selectedCourse">
@@ -127,10 +127,10 @@ function formatDate(dateStr: string) {
       </div>
     </div>
 
-    <div v-if="loading" class="loading">Loading...</div>
+    <div v-if="loading" class="page-loading">Loading...</div>
 
     <!-- Attendance Table -->
-    <table class="table" v-if="attendances.length">
+    <table class="page-table" v-if="attendances.length">
       <thead>
         <tr>
           <th>Student</th>
@@ -164,79 +164,17 @@ function formatDate(dateStr: string) {
       </tbody>
     </table>
 
-    <div v-else-if="selectedSession && !loading" class="empty">
+    <div v-else-if="selectedSession && !loading" class="page-empty">
       No attendance records found for this session.
     </div>
-    <div v-else-if="!selectedSession && !loading" class="empty">
+    <div v-else-if="!selectedSession && !loading" class="page-empty">
       Select a session to view attendance records.
     </div>
   </div>
 </template>
 
 <style scoped>
-.container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.filters {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.filter-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.filter-group label {
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.filter-group select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  min-width: 200px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.table th,
-.table td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.table th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-
-.table tr:hover {
-  background: #fafafa;
-}
-
+/* Status select styles */
 .status-select {
   padding: 4px 8px;
   border-radius: 4px;
@@ -262,40 +200,5 @@ function formatDate(dateStr: string) {
 .status-excused {
   background: #dbeafe;
   color: #1e40af;
-}
-
-.btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  background: white;
-}
-
-.btn-danger {
-  background: var(--color-light-red);
-  color: white;
-  border-color: var(--color-light-red);
-}
-
-.btn-sm {
-  padding: 4px 8px;
-}
-
-.alert-error {
-  padding: 12px;
-  background: #fee2e2;
-  color: #b91c1c;
-  border-radius: 4px;
-  margin-bottom: 16px;
-}
-
-.loading,
-.empty {
-  text-align: center;
-  padding: 60px 20px;
-  color: #6b7280;
-  background: white;
-  border-radius: 8px;
 }
 </style>
