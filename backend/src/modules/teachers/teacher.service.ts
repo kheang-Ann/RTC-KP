@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -191,6 +192,19 @@ export class TeacherService {
 
     // Update user department if provided
     if (dto.departmentId && teacher.userId) {
+      // Check if department is actually changing
+      if (dto.departmentId !== teacher.departmentId) {
+        // Check for courses assigned to this teacher
+        const coursesCount = await this.courseRepo.count({
+          where: { teacherId: teacher.userId },
+        });
+        if (coursesCount > 0) {
+          throw new BadRequestException(
+            `Cannot change department. Teacher is assigned to ${coursesCount} course(s). Please reassign or remove the teacher from all courses first.`,
+          );
+        }
+      }
+
       await this.userRepo.update(teacher.userId, {
         departmentId: dto.departmentId,
       });

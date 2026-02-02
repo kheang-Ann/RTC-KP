@@ -4,6 +4,7 @@ import { sessionsService, type Session, type CreateSessionDto, type SessionStatu
 import { coursesService, type Course } from '@/services/courses'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
+import { authService } from '@/services/auth'
 import QRCode from 'qrcode'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
@@ -24,6 +25,10 @@ const deleteTargetId = ref<string | null>(null)
 const activeSession = ref<Session | null>(null)
 const editingSession = ref<Session | null>(null)
 const qrCodeDataUrl = ref<string>('')
+
+// Get current user's department
+const currentUser = authService.getUser()
+const userDepartmentId = currentUser?.departmentId ?? null
 
 const form = ref<CreateSessionDto>({
   title: '',
@@ -74,8 +79,14 @@ async function loadData() {
     ])
     sessions.value = sessionsData
     courses.value = coursesData
-    departments.value = departmentsData
-    programs.value = programsData
+    // Filter departments to only show the teacher's department
+    departments.value = userDepartmentId
+      ? departmentsData.filter((d) => d.id === userDepartmentId)
+      : departmentsData
+    // Filter programs to only show programs in the teacher's department
+    programs.value = userDepartmentId
+      ? programsData.filter((p) => p.departmentId === userDepartmentId)
+      : programsData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -255,6 +266,7 @@ function formatDateTimeLocal(date: Date): string {
 
 function formatDateTime(dateStr: string) {
   return new Date(dateStr).toLocaleString('en-GB', {
+    timeZone: 'Asia/Phnom_Penh',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

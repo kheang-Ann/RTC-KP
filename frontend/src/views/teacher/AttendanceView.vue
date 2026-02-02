@@ -12,6 +12,7 @@ import { schedulesService, type Schedule } from '@/services/schedules'
 import { groupsService, type AvailableStudent } from '@/services/groups'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
+import { authService } from '@/services/auth'
 import { isValidRemarks } from '@/utils/validation'
 
 const attendances = ref<Attendance[]>([])
@@ -28,6 +29,10 @@ const selectedSession = ref<string>('')
 const loading = ref(false)
 const error = ref('')
 const successMessage = ref('')
+
+// Get current user's department
+const currentUser = authService.getUser()
+const userDepartmentId = currentUser?.departmentId ?? null
 
 const statuses: AttendanceStatus[] = ['present', 'absent', 'late', 'excused']
 
@@ -85,8 +90,14 @@ async function loadInitialData() {
     courses.value = coursesData
     sessions.value = sessionsData
     schedules.value = schedulesData
-    departments.value = departmentsData
-    programs.value = programsData
+    // Filter departments to only show the teacher's department
+    departments.value = userDepartmentId
+      ? departmentsData.filter((d) => d.id === userDepartmentId)
+      : departmentsData
+    // Filter programs to only show programs in the teacher's department
+    programs.value = userDepartmentId
+      ? programsData.filter((p) => p.departmentId === userDepartmentId)
+      : programsData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
