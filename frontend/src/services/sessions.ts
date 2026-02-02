@@ -45,6 +45,10 @@ export const sessionsService = {
     return api.get<Session[]>(`/sessions/course/${courseId}`)
   },
 
+  getUpcoming(): Promise<Session[]> {
+    return api.get<Session[]>('/sessions/upcoming')
+  },
+
   create(data: CreateSessionDto): Promise<Session> {
     return api.post<Session>('/sessions', data)
   },

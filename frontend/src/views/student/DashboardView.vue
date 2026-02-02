@@ -2,10 +2,12 @@
 import { ref, onMounted, computed } from 'vue'
 import { schedulesService, type Schedule } from '@/services/schedules'
 import { attendanceService, type Attendance } from '@/services/attendance'
+import { sessionsService, type Session } from '@/services/sessions'
 import { authService } from '@/services/auth'
 
 const schedules = ref<Schedule[]>([])
 const attendances = ref<Attendance[]>([])
+const upcomingSessions = ref<Session[]>([])
 const loading = ref(false)
 const error = ref('')
 
@@ -36,12 +38,14 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [schedulesData, attendancesData] = await Promise.all([
+    const [schedulesData, attendancesData, upcomingData] = await Promise.all([
       schedulesService.getMySchedule(1), // Default to semester 1
       attendanceService.getMyAttendance(),
+      sessionsService.getUpcoming(),
     ])
     schedules.value = schedulesData
     attendances.value = attendancesData
+    upcomingSessions.value = upcomingData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -68,6 +72,21 @@ function formatDate(dateStr?: string) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function formatSessionTime(startTime: string, endTime: string) {
+  const start = new Date(startTime)
+  const end = new Date(endTime)
+  return `${start.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })} ${start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`
+}
+
+function getSessionStatusClass(status: string) {
+  const classes: Record<string, string> = {
+    active: 'session-active',
+    scheduled: 'session-scheduled',
+    completed: 'session-completed',
+  }
+  return classes[status] || ''
 }
 </script>
 
@@ -136,6 +155,27 @@ function formatDate(dateStr?: string) {
             <span class="action-desc">Request leave</span>
           </router-link>
         </div>
+      </div>
+
+      <!-- Upcoming Sessions -->
+      <div class="page-section">
+        <h2 class="section-title">Upcoming Sessions</h2>
+        <div v-if="upcomingSessions.length" class="sessions-list">
+          <div v-for="session in upcomingSessions.slice(0, 5)" :key="session.id" class="session-card" :class="{ 'session-active-card': session.status === 'active' }">
+            <div class="session-header">
+              <span class="session-status-badge" :class="getSessionStatusClass(session.status)">
+                {{ session.status === 'active' ? '🔴 Active Now' : 'Upcoming' }}
+              </span>
+              <span class="session-course">{{ session.course?.code || session.course?.name }}</span>
+            </div>
+            <div class="session-title">{{ session.title }}</div>
+            <div class="session-time">{{ formatSessionTime(session.startTime, session.endTime) }}</div>
+            <router-link v-if="session.status === 'active'" to="/student/check-in" class="btn btn-sm btn-primary session-checkin-btn">
+              Check In Now
+            </router-link>
+          </div>
+        </div>
+        <div v-else class="page-empty">No upcoming sessions.</div>
       </div>
 
       <!-- My Courses -->
@@ -329,4 +369,81 @@ function formatDate(dateStr?: string) {
 .status-late { background: #fff3cd; color: #856404; }
 .status-absent { background: #f8d7da; color: #721c24; }
 .status-excused { background: #cce5ff; color: #004085; }
+
+/* Upcoming Sessions Styles */
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.session-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.session-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.session-active-card {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.session-status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.session-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.session-scheduled {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.session-completed {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.session-course {
+  font-size: 0.8rem;
+  color: var(--color-grey);
+  font-weight: 500;
+}
+
+.session-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: var(--color-dark-grey);
+}
+
+.session-time {
+  font-size: 0.85rem;
+  color: var(--color-grey);
+}
+
+.session-checkin-btn {
+  margin-top: 0.75rem;
+  display: inline-block;
+}
 </style>

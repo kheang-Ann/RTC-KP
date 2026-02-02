@@ -11,6 +11,8 @@ import { Session, SessionStatus } from './entities/session.entity';
 import { CreateSessionDto } from './dto/create-session.to';
 import { UpdateSessionDto } from './dto/update-session.dto';
 import { Course } from '../courses/entities/course.entity';
+import { Schedule } from '../schedules/entities/schedule.entity';
+import { Student } from '../students/entities/student.entity';
 
 @Injectable()
 export class SessionsService {
@@ -19,6 +21,10 @@ export class SessionsService {
     private sessionRepo: Repository<Session>,
     @InjectRepository(Course)
     private courseRepo: Repository<Course>,
+    @InjectRepository(Schedule)
+    private scheduleRepo: Repository<Schedule>,
+    @InjectRepository(Student)
+    private studentRepo: Repository<Student>,
   ) {}
 
   async create(
@@ -174,10 +180,49 @@ export class SessionsService {
       );
     }
 
+    const startTime = dto.startTime
+      ? new Date(dto.startTime)
+      : session.startTime;
+    const endTime = dto.endTime ? new Date(dto.endTime) : session.endTime;
+
+    // Check for duplicate title in the same course (excluding current session)
+    if (dto.title) {
+      const existingTitle = await this.sessionRepo.findOne({
+        where: { courseId: session.courseId, title: dto.title.trim() },
+      });
+      if (existingTitle && existingTitle.id !== id) {
+        throw new ConflictException(
+          `A session with title '${dto.title}' already exists for this course`,
+        );
+      }
+    }
+
+    // Check for time overlap with existing sessions in the same course (excluding current session)
+    if (dto.startTime || dto.endTime) {
+      const overlappingSession = await this.sessionRepo
+        .createQueryBuilder('session')
+        .where('session.courseId = :courseId', { courseId: session.courseId })
+        .andWhere('session.id != :id', { id })
+        .andWhere(
+          '((session.startTime <= :startTime AND session.endTime > :startTime) OR ' +
+            '(session.startTime < :endTime AND session.endTime >= :endTime) OR ' +
+            '(session.startTime >= :startTime AND session.endTime <= :endTime))',
+          { startTime, endTime },
+        )
+        .getOne();
+
+      if (overlappingSession) {
+        throw new ConflictException(
+          `Session time overlaps with existing session '${overlappingSession.title}'`,
+        );
+      }
+    }
+
     Object.assign(session, {
       ...dto,
-      startTime: dto.startTime ? new Date(dto.startTime) : session.startTime,
-      endTime: dto.endTime ? new Date(dto.endTime) : session.endTime,
+      title: dto.title ? dto.title.trim() : session.title,
+      startTime,
+      endTime,
     });
 
     return this.sessionRepo.save(session);
@@ -284,5 +329,51 @@ export class SessionsService {
       .execute();
 
     return result.affected || 0;
+  }
+
+  // Get upcoming and active sessions for a student based on their enrolled courses
+  async findUpcomingForStudent(userId: number): Promise<Session[]> {
+    // Auto-close any expired sessions before returning
+    await this.closeExpiredSessions();
+
+    // First, find the student by userId to get their groupId
+    const student = await this.studentRepo.findOne({
+      where: { userId },
+    });
+
+    if (!student || !student.groupId) {
+      return [];
+    }
+
+    // Find all courses scheduled for this student's group
+    const schedules = await this.scheduleRepo.find({
+      where: { groupId: student.groupId, isActive: true },
+      select: ['courseId'],
+    });
+
+    if (schedules.length === 0) {
+      return [];
+    }
+
+    const courseIds = [...new Set(schedules.map((s) => s.courseId))];
+
+    // Find all upcoming and active sessions for these courses
+    const now = new Date();
+    return this.sessionRepo
+      .createQueryBuilder('session')
+      .leftJoinAndSelect('session.course', 'course')
+      .leftJoinAndSelect('course.teacher', 'teacher')
+      .leftJoinAndSelect('session.createdBy', 'createdBy')
+      .where('session.courseId IN (:...courseIds)', { courseIds })
+      .andWhere(
+        '(session.status = :active OR (session.status = :scheduled AND session.endTime > :now))',
+        {
+          active: SessionStatus.ACTIVE,
+          scheduled: SessionStatus.SCHEDULED,
+          now,
+        },
+      )
+      .orderBy('session.startTime', 'ASC')
+      .getMany();
   }
 }

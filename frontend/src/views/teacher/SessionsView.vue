@@ -25,6 +25,7 @@ const deleteTargetId = ref<string | null>(null)
 const activeSession = ref<Session | null>(null)
 const editingSession = ref<Session | null>(null)
 const qrCodeDataUrl = ref<string>('')
+const modalError = ref('')
 
 // Get current user's department
 const currentUser = authService.getUser()
@@ -96,6 +97,7 @@ async function loadData() {
 
 function openCreate() {
   editingSession.value = null
+  modalError.value = ''
   const now = new Date()
   const start = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour from now
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000) // 2 hours after start
@@ -112,6 +114,7 @@ function openCreate() {
 
 function openEdit(session: Session) {
   editingSession.value = session
+  modalError.value = ''
   form.value = {
     title: session.title,
     description: session.description || '',
@@ -124,7 +127,7 @@ function openEdit(session: Session) {
 
 async function saveSession() {
   loading.value = true
-  error.value = ''
+  modalError.value = ''
   try {
     // Convert local datetime-local values to ISO strings with timezone
     const payload = {
@@ -143,7 +146,7 @@ async function saveSession() {
     setTimeout(() => (successMessage.value = ''), 3000)
     await loadData()
   } catch (e) {
-    error.value = (e as Error).message
+    modalError.value = (e as Error).message
   } finally {
     loading.value = false
   }
@@ -405,6 +408,7 @@ function getStatusLabel(status: SessionStatus) {
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal">
         <h2>{{ editingSession ? 'Edit Session' : 'Create Session' }}</h2>
+        <div v-if="modalError" class="modal-error">{{ modalError }}</div>
         <form @submit.prevent="saveSession">
           <div class="form-group">
             <label>Title</label>
@@ -671,5 +675,15 @@ function getStatusLabel(status: SessionStatus) {
 .code-instruction {
   color: #6b7280;
   font-size: 14px;
+}
+
+.modal-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  border: 1px solid #fecaca;
 }
 </style>

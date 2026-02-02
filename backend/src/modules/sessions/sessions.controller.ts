@@ -43,6 +43,12 @@ export class SessionsController {
     return this.sessionsService.findAll(req.user.sub, isAdmin);
   }
 
+  @Get('upcoming')
+  @Roles('student')
+  async findUpcoming(@Req() req: RequestWithUser) {
+    return this.sessionsService.findUpcomingForStudent(req.user.sub);
+  }
+
   @Get('course/:courseId')
   @Roles('teacher', 'admin', 'student')
   async findByCourse(@Param('courseId') courseId: string) {
