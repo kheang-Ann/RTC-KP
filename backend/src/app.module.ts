@@ -22,7 +22,7 @@ import { ScheduleModule } from './modules/schedules/schedule.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [DatabaseConfig],
-      envFilePath: '../.env',
+      envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

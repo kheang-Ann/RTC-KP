@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authService } from '@/services/auth'
+import RTCLogo from './RTCLogo.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -134,7 +135,9 @@ function closeMobileMenu() {
     <div class="main-wrapper">
       <!-- Top Navbar -->
       <header class="navbar">
-        <h1 class="navbar-title">Student Management System</h1>
+        <div class="navbar-brand">
+          <RTCLogo size="small" :showText="true" />
+        </div>
         <div class="navbar-user">
           <router-link :to="profilePath" class="user-profile-link">
             <div class="user-avatar">{{ userInitial }}</div>
@@ -175,12 +178,15 @@ function closeMobileMenu() {
 }
 
 .sidebar-header {
-  padding: 24px 20px;
+  padding: 20px;
   border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .menu-label {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #1f2937;
 }
@@ -242,13 +248,13 @@ function closeMobileMenu() {
   justify-content: space-between;
   padding: 0 24px;
   z-index: 90;
+  gap: 24px;
 }
 
-.navbar-title {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0;
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .navbar-user {
