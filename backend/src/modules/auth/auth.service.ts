@@ -62,6 +62,7 @@ export class AuthService {
     let studentId: number | null = null;
     let groupId: number | null = null;
     let teacherId: number | null = null;
+    const departmentId: number | null = user.departmentId ?? null;
 
     if (roleNames.includes('student')) {
       const student = await this.studentRepo.findOne({
@@ -93,6 +94,7 @@ export class AuthService {
         studentId,
         groupId,
         teacherId,
+        departmentId,
       },
       {
         secret: process.env.JWT_ACCESS_SECRET,
@@ -124,6 +126,7 @@ export class AuthService {
         studentId,
         groupId,
         teacherId,
+        departmentId,
       },
     };
   }

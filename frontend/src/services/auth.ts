@@ -38,6 +38,7 @@ export interface CurrentUser {
   studentId?: number | null
   groupId?: number | null
   teacherId?: number | null
+  departmentId?: number | null
 }
 
 export const authService = {

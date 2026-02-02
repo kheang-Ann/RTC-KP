@@ -6,6 +6,7 @@ import { attendanceService, type Attendance } from '@/services/attendance'
 import { departmentsService, type Department } from '@/services/departments'
 import { programsService, type Program } from '@/services/programs'
 import { groupsService, type AvailableStudent } from '@/services/groups'
+import { authService } from '@/services/auth'
 
 const students = ref<AvailableStudent[]>([])
 const studentGroupMap = ref<Map<number, number[]>>(new Map()) // studentId -> groupIds[]
@@ -15,6 +16,10 @@ const departments = ref<Department[]>([])
 const programs = ref<Program[]>([])
 const loading = ref(false)
 const error = ref('')
+
+// Get current user's department
+const currentUser = authService.getUser()
+const userDepartmentId = currentUser?.departmentId ?? null
 
 // Filters
 const selectedGender = ref<string>('')
@@ -80,8 +85,14 @@ async function loadData() {
     ])
     courses.value = coursesData
     schedules.value = schedulesData
-    departments.value = departmentsData
-    programs.value = programsData
+    // Filter departments to only show the teacher's department
+    departments.value = userDepartmentId
+      ? departmentsData.filter((d) => d.id === userDepartmentId)
+      : departmentsData
+    // Filter programs to only show programs in the teacher's department
+    programs.value = userDepartmentId
+      ? programsData.filter((p) => p.departmentId === userDepartmentId)
+      : programsData
 
     // Get unique groups from schedules
     const groupIds = [...new Set(schedulesData.map(s => s.groupId))]

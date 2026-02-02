@@ -200,8 +200,19 @@ export class SessionsService {
     const endTime = new Date(session.endTime);
 
     if (now < startTime || now > endTime) {
+      // Format times in Cambodia timezone for clarity
+      const formatTime = (d: Date) =>
+        d.toLocaleString('en-GB', {
+          timeZone: 'Asia/Phnom_Penh',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        });
       throw new BadRequestException(
-        `Cannot activate session outside of scheduled time. Session is scheduled from ${startTime.toLocaleString()} to ${endTime.toLocaleString()}`,
+        `Cannot activate session outside of scheduled time. Session is scheduled from ${formatTime(startTime)} to ${formatTime(endTime)}. Current time: ${formatTime(now)}`,
       );
     }
 

@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/entities/user-role.entity';
 import { Role } from '../users/entities/role.entity';
 import { Course } from '../courses/entities/course.entity';
+import { Schedule } from '../schedules/entities/schedule.entity';
 
 @Injectable()
 export class TeacherService {
@@ -27,6 +29,8 @@ export class TeacherService {
     private roleRepo: Repository<Role>,
     @InjectRepository(Course)
     private courseRepo: Repository<Course>,
+    @InjectRepository(Schedule)
+    private scheduleRepo: Repository<Schedule>,
   ) {}
 
   async create(dto: CreateTeacherDto, imageFile?: string): Promise<Teacher> {
@@ -191,6 +195,37 @@ export class TeacherService {
 
     // Update user department if provided
     if (dto.departmentId && teacher.userId) {
+      // Check if department is actually changing
+      if (dto.departmentId !== teacher.departmentId) {
+        // Check for courses assigned to this teacher
+        const coursesCount = await this.courseRepo.count({
+          where: { teacherId: teacher.userId },
+        });
+        if (coursesCount > 0) {
+          throw new BadRequestException(
+            `Cannot change department. Teacher is assigned to ${coursesCount} course(s). Please reassign or remove the teacher from all courses first.`,
+          );
+        }
+
+        // Check for schedules through courses
+        const teacherCourses = await this.courseRepo.find({
+          where: { teacherId: teacher.userId },
+          select: ['id'],
+        });
+        if (teacherCourses.length > 0) {
+          const courseIds = teacherCourses.map((c) => c.id);
+          const schedulesCount = await this.scheduleRepo
+            .createQueryBuilder('schedule')
+            .where('schedule.courseId IN (:...courseIds)', { courseIds })
+            .getCount();
+          if (schedulesCount > 0) {
+            throw new BadRequestException(
+              `Cannot change department. Teacher has ${schedulesCount} schedule(s) through their courses. Please remove all schedules first.`,
+            );
+          }
+        }
+      }
+
       await this.userRepo.update(teacher.userId, {
         departmentId: dto.departmentId,
       });

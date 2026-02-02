@@ -269,6 +269,16 @@ export class StudentService {
 
     // Update user department if provided
     if (dto.departmentId && student.userId) {
+      // Check if department is actually changing
+      if (dto.departmentId !== student.departmentId) {
+        // Check if student belongs to a group
+        if (student.groupId) {
+          throw new BadRequestException(
+            `Cannot change department. Student is assigned to a group. Please remove the student from their group first.`,
+          );
+        }
+      }
+
       await this.userRepo.update(student.userId, {
         departmentId: dto.departmentId,
       });
