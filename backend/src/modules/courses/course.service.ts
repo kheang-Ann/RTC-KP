@@ -2,7 +2,6 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not } from 'typeorm';
@@ -81,25 +80,11 @@ export class CourseService {
       throw new NotFoundException('Course not found');
     }
 
-    // Check for related schedules
-    const schedulesCount = await this.scheduleRepo.count({
-      where: { courseId: id },
-    });
-    if (schedulesCount > 0) {
-      throw new BadRequestException(
-        `Cannot delete course. Please remove ${schedulesCount} schedule(s) first.`,
-      );
-    }
+    // Delete related schedules first
+    await this.scheduleRepo.delete({ courseId: id });
 
-    // Check for related sessions
-    const sessionsCount = await this.sessionRepo.count({
-      where: { courseId: id },
-    });
-    if (sessionsCount > 0) {
-      throw new BadRequestException(
-        `Cannot delete course. Please remove ${sessionsCount} session(s) first.`,
-      );
-    }
+    // Delete related sessions
+    await this.sessionRepo.delete({ courseId: id });
 
     await this.courseRepo.delete(id);
   }

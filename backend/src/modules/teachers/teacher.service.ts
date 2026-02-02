@@ -14,7 +14,6 @@ import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/entities/user-role.entity';
 import { Role } from '../users/entities/role.entity';
 import { Course } from '../courses/entities/course.entity';
-import { Schedule } from '../schedules/entities/schedule.entity';
 
 @Injectable()
 export class TeacherService {
@@ -29,8 +28,6 @@ export class TeacherService {
     private roleRepo: Repository<Role>,
     @InjectRepository(Course)
     private courseRepo: Repository<Course>,
-    @InjectRepository(Schedule)
-    private scheduleRepo: Repository<Schedule>,
   ) {}
 
   async create(dto: CreateTeacherDto, imageFile?: string): Promise<Teacher> {
@@ -205,24 +202,6 @@ export class TeacherService {
           throw new BadRequestException(
             `Cannot change department. Teacher is assigned to ${coursesCount} course(s). Please reassign or remove the teacher from all courses first.`,
           );
-        }
-
-        // Check for schedules through courses
-        const teacherCourses = await this.courseRepo.find({
-          where: { teacherId: teacher.userId },
-          select: ['id'],
-        });
-        if (teacherCourses.length > 0) {
-          const courseIds = teacherCourses.map((c) => c.id);
-          const schedulesCount = await this.scheduleRepo
-            .createQueryBuilder('schedule')
-            .where('schedule.courseId IN (:...courseIds)', { courseIds })
-            .getCount();
-          if (schedulesCount > 0) {
-            throw new BadRequestException(
-              `Cannot change department. Teacher has ${schedulesCount} schedule(s) through their courses. Please remove all schedules first.`,
-            );
-          }
         }
       }
 
