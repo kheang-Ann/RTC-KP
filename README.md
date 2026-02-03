@@ -891,13 +891,3 @@ docker-compose down -v
 3. Check database: Access via pgAdmin (localhost:5050 if using docker pgadmin)
 4. Review error messages carefully
 5. Google the error message
-
-## License
-
-© 2026 RTC-KP. Internal Use Only.
-
----
-
-**Last Updated**: February 3, 2026
-**Version**: 1.0.0
-**Maintained By**: Development Team
