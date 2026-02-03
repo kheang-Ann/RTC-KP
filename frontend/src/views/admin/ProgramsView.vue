@@ -165,10 +165,12 @@ function getDegreeColor(degreeType: string) {
           </td>
           <td>{{ program.department?.name || '-' }}</td>
           <td>
-            <button class="btn btn-sm btn-secondary" @click="openEdit(program)">Edit</button>
-            <button class="btn btn-sm btn-danger" @click="deleteProgram(program.id)">
-              Delete
-            </button>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-secondary" @click="openEdit(program)">Edit</button>
+              <button class="btn btn-sm btn-danger" @click="deleteProgram(program.id)">
+                Delete
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>

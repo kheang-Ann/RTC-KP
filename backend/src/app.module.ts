@@ -16,6 +16,8 @@ import { StudentModule } from './modules/students/student.module';
 import { TeacherModule } from './modules/teachers/teacher.module';
 import { GroupModule } from './modules/groups/group.module';
 import { ScheduleModule } from './modules/schedules/schedule.module';
+import { LibraryModule } from './modules/library/library.module';
+import { LibraryRequestsModule } from './modules/library-requests/library-requests.module';
 
 @Module({
   imports: [
@@ -46,6 +48,8 @@ import { ScheduleModule } from './modules/schedules/schedule.module';
     TeacherModule,
     GroupModule,
     ScheduleModule,
+    LibraryModule,
+    LibraryRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

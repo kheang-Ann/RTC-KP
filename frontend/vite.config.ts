@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
-    basicSsl(), // Enable HTTPS for camera access on iOS
+    // basicSsl(), // Disabled for now - use HTTP
   ],
   resolve: {
     alias: {
@@ -19,6 +19,5 @@ export default defineConfig({
   server: {
     host: true,
     port: 5174,
-    // HTTPS is handled by basicSsl plugin
   },
 })

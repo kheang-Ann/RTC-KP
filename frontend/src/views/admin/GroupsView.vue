@@ -261,9 +261,11 @@ watch(() => form.value.programId, () => {
           <td>{{ group.students?.length || 0 }}</td>
           <td>{{ group.maxCapacity }}</td>
           <td>
-            <button class="btn btn-sm" @click="openStudentModal(group)">Students</button>
-            <button class="btn btn-sm btn-secondary" @click="openEdit(group)">Edit</button>
-            <button class="btn btn-sm btn-danger" @click="deleteGroup(group.id)">Delete</button>
+            <div class="btn-actions">
+              <button class="btn btn-sm" @click="openStudentModal(group)">Students</button>
+              <button class="btn btn-sm btn-secondary" @click="openEdit(group)">Edit</button>
+              <button class="btn btn-sm btn-danger" @click="deleteGroup(group.id)">Delete</button>
+            </div>
           </td>
         </tr>
       </tbody>

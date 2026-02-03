@@ -150,6 +150,11 @@ function formatDate(dateStr?: string) {
             <span class="action-label">Leave</span>
             <span class="action-desc">Review requests</span>
           </router-link>
+          <router-link to="/admin/library" class="action-card card-yellow">
+            <span class="action-icon">📖</span>
+            <span class="action-label">E-Library</span>
+            <span class="action-desc">View library</span>
+          </router-link>
         </div>
       </div>
 

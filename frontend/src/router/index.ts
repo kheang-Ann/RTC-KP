@@ -26,6 +26,9 @@ const StudentScheduleView = () => import('@/views/student/ScheduleView.vue')
 const TeacherLeaveRequestsView = () => import('@/views/teacher/LeaveRequestsView.vue')
 const TeacherScheduleView = () => import('@/views/teacher/ScheduleView.vue')
 const AdminLeaveRequestsView = () => import('@/views/admin/LeaveRequestsView.vue')
+const LibraryView = () => import('@/views/admin/LibraryView.vue')
+const LibraryUploadView = () => import('@/views/admin/LibraryUploadView.vue')
+const LibraryRequestsView = () => import('@/views/admin/LibraryRequestsView.vue')
 const ProfileView = () => import('@/views/ProfileView.vue')
 const RedirectView = () => import('@/views/RedirectView.vue')
 
@@ -110,6 +113,21 @@ const router = createRouter({
           component: AdminScheduleView,
         },
         {
+          path: 'library',
+          name: 'admin-library',
+          component: LibraryView,
+        },
+        {
+          path: 'library-upload',
+          name: 'admin-library-upload',
+          component: LibraryUploadView,
+        },
+        {
+          path: 'library-requests',
+          name: 'admin-library-requests',
+          component: LibraryRequestsView,
+        },
+        {
           path: 'profile',
           name: 'admin-profile',
           component: ProfileView,
@@ -154,6 +172,16 @@ const router = createRouter({
           component: TeacherScheduleView,
         },
         {
+          path: 'library',
+          name: 'teacher-library',
+          component: LibraryView,
+        },
+        {
+          path: 'library-requests',
+          name: 'teacher-library-requests',
+          component: LibraryRequestsView,
+        },
+        {
           path: 'profile',
           name: 'teacher-profile',
           component: ProfileView,
@@ -196,6 +224,16 @@ const router = createRouter({
           path: 'schedule',
           name: 'student-schedule',
           component: StudentScheduleView,
+        },
+        {
+          path: 'library',
+          name: 'student-library',
+          component: LibraryView,
+        },
+        {
+          path: 'library-requests',
+          name: 'student-library-requests',
+          component: LibraryRequestsView,
         },
         {
           path: 'profile',

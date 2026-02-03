@@ -42,15 +42,18 @@ const menuItems: MenuItem[] = [
   // Admin menu items
   { name: 'Dashboard', path: '/admin/dashboard', icon: '🏠', roles: ['admin'] },
   { name: 'Departments', path: '/admin/departments', icon: '🏢', roles: ['admin'] },
-  { name: 'Programs', path: '/admin/programs', icon: '📖', roles: ['admin'] },
+  { name: 'Programs', path: '/admin/programs', icon: '🎓', roles: ['admin'] },
   { name: 'Courses', path: '/admin/courses', icon: '📚', roles: ['admin'] },
   { name: 'Groups', path: '/admin/groups', icon: '👥', roles: ['admin'] },
   { name: 'Schedule', path: '/admin/schedule', icon: '📆', roles: ['admin'] },
-  { name: 'Students', path: '/admin/students', icon: '🎓', roles: ['admin'] },
+  { name: 'Students', path: '/admin/students', icon: '👨‍🎓', roles: ['admin'] },
   { name: 'Teachers', path: '/admin/teachers', icon: '👨‍🏫', roles: ['admin'] },
   { name: 'Leave Requests', path: '/admin/leave-requests', icon: '📝', roles: ['admin'] },
   { name: 'Sessions', path: '/admin/sessions', icon: '📅', roles: ['admin'] },
   { name: 'Attendance', path: '/admin/attendance', icon: '✅', roles: ['admin'] },
+  { name: 'E-Library', path: '/admin/library', icon: '📖', roles: ['admin'] },
+  { name: 'Library Uploads', path: '/admin/library-upload', icon: '⬆️', roles: ['admin'] },
+  { name: 'Library Requests', path: '/admin/library-requests', icon: '📋', roles: ['admin'] },
   { name: 'Profile', path: '/admin/profile', icon: '👤', roles: ['admin'] },
   // Teacher menu items
   { name: 'Dashboard', path: '/teacher/dashboard', icon: '🏠', roles: ['teacher'] },
@@ -59,6 +62,8 @@ const menuItems: MenuItem[] = [
   { name: 'Attendance', path: '/teacher/attendance', icon: '✅', roles: ['teacher'] },
   { name: 'Students', path: '/teacher/students', icon: '🎓', roles: ['teacher'] },
   { name: 'Leave Requests', path: '/teacher/leave-requests', icon: '📝', roles: ['teacher'] },
+  { name: 'E-Library', path: '/teacher/library', icon: '�', roles: ['teacher'] },
+  { name: 'Library Requests', path: '/teacher/library-requests', icon: '📋', roles: ['teacher'] },
   { name: 'Profile', path: '/teacher/profile', icon: '👤', roles: ['teacher'] },
   // Student menu items
   { name: 'Dashboard', path: '/student/dashboard', icon: '🏠', roles: ['student'] },
@@ -67,6 +72,8 @@ const menuItems: MenuItem[] = [
   { name: 'My Attendance', path: '/student/attendance', icon: '📊', roles: ['student'] },
   { name: 'My Courses', path: '/student/courses', icon: '📚', roles: ['student'] },
   { name: 'Leave Requests', path: '/student/leave-requests', icon: '📝', roles: ['student'] },
+  { name: 'E-Library', path: '/student/library', icon: '�', roles: ['student'] },
+  { name: 'Library Requests', path: '/student/library-requests', icon: '📋', roles: ['student'] },
   { name: 'Profile', path: '/student/profile', icon: '👤', roles: ['student'] },
 ]
 

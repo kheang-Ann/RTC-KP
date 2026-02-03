@@ -354,10 +354,12 @@ function getDepartmentName(departmentId: number | undefined): string {
           <td>{{ getDepartmentName(teacher.departmentId) }}</td>
           <td>{{ teacher.personalEmail }}</td>
           <td>
-            <button class="btn btn-sm btn-secondary" @click="openEdit(teacher)">Edit</button>
-            <button class="btn btn-sm btn-danger" @click="deleteTeacher(teacher.id)">
-              Delete
-            </button>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-secondary" @click="openEdit(teacher)">Edit</button>
+              <button class="btn btn-sm btn-danger" @click="deleteTeacher(teacher.id)">
+                Delete
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>

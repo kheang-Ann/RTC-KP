@@ -605,10 +605,12 @@ async function submitBulkYearUpdate() {
             </span>
           </td>
           <td>
-            <button class="btn btn-sm btn-secondary" @click="openEdit(student)">Edit</button>
-            <button class="btn btn-sm btn-danger" @click="deleteStudent(student.id)">
-              Delete
-            </button>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-secondary" @click="openEdit(student)">Edit</button>
+              <button class="btn btn-sm btn-danger" @click="deleteStudent(student.id)">
+                Delete
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>

@@ -377,6 +377,33 @@ p { font-size: var(--fs-para); }
   border-color: #dc2626;
 }
 
+/* Button groups - for actions like Edit and Delete buttons */
+.btn-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-group .btn {
+  flex: 1;
+}
+
+/* Multiple action buttons with wrapping */
+.btn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-actions .btn {
+  flex: 0 1 auto;
+}
+
+/* Action buttons in table rows */
+td .btn + .btn {
+  margin-left: 0.5rem;
+}
+
 .btn-code {
   background: var(--color-primary);
   color: white;

@@ -362,10 +362,12 @@ function getStatusLabel(status: SessionStatus) {
             >
               New Code
             </button>
-            <button class="btn btn-sm btn-secondary" @click="openEdit(session)">Edit</button>
-            <button class="btn btn-sm btn-danger" @click="deleteSession(session.id)">
-              Delete
-            </button>
+            <div class="btn-group">
+              <button class="btn btn-sm btn-secondary" @click="openEdit(session)">Edit</button>
+              <button class="btn btn-sm btn-danger" @click="deleteSession(session.id)">
+                Delete
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
