@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
@@ -191,9 +192,10 @@ export class TeacherService {
     }
 
     // Update user department if provided
-    if (dto.departmentId && teacher.userId) {
+    if (dto.departmentId !== undefined && teacher.userId) {
+      const newDepartmentId = Number(dto.departmentId);
       // Check if department is actually changing
-      if (dto.departmentId !== teacher.departmentId) {
+      if (newDepartmentId !== teacher.departmentId) {
         // Check for courses assigned to this teacher
         const coursesCount = await this.courseRepo.count({
           where: { teacherId: teacher.userId },
@@ -206,7 +208,7 @@ export class TeacherService {
       }
 
       await this.userRepo.update(teacher.userId, {
-        departmentId: dto.departmentId,
+        departmentId: newDepartmentId,
       });
     }
 
@@ -226,7 +228,11 @@ export class TeacherService {
     if (dto.nameLatin) updateData.nameLatin = dto.nameLatin;
     if (dto.gender) updateData.gender = dto.gender;
     if (dto.dob) updateData.dob = new Date(dto.dob);
-    if (dto.departmentId) updateData.departmentId = dto.departmentId;
+    if (dto.departmentId) {
+      updateData.departmentId = Number(dto.departmentId);
+      // Clear the loaded relation so TypeORM uses departmentId
+      teacher.department = undefined as any;
+    }
     if (dto.personalEmail) updateData.personalEmail = dto.personalEmail;
     if (dto.phoneNumbers) updateData.phoneNumbers = dto.phoneNumbers;
     if (imageFile) updateData.image = imageFile;

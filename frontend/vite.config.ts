@@ -9,7 +9,7 @@ export default defineConfig({
   plugins: [
     vue(),
     vueDevTools(),
-    // basicSsl(), // Disabled for now - use HTTP
+    basicSsl(), // Disabled for now - use HTTP
   ],
   resolve: {
     alias: {

@@ -24,7 +24,7 @@ import { LibraryRequestsModule } from './modules/library-requests/library-reques
     ConfigModule.forRoot({
       isGlobal: true,
       load: [DatabaseConfig],
-      envFilePath: '.env',
+      envFilePath: './.env',
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
