@@ -18,14 +18,14 @@ export class CreateProgramDto {
   name: string;
 
   @Type(() => Number)
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'Duration is required' })
+  @Min(1, { message: 'Duration must be at least 1 year' })
   duration: number;
 
-  @IsEnum(DegreeType)
+  @IsEnum(DegreeType, { message: 'Please select a valid degree type' })
   degreeType: DegreeType;
 
   @Type(() => Number)
-  @IsInt()
+  @IsInt({ message: 'Department is required' })
   departmentId: number;
 }

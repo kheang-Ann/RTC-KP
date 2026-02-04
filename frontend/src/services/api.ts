@@ -55,7 +55,9 @@ class ApiService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }))
-      throw new Error(error.message || `HTTP error! status: ${response.status}`)
+      // Handle array messages from NestJS validation
+      const message = Array.isArray(error.message) ? error.message.join(', ') : error.message
+      throw new Error(message || `HTTP error! status: ${response.status}`)
     }
 
     // Handle empty responses (like 204 No Content)
@@ -126,7 +128,9 @@ class ApiService {
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ message: 'Request failed' }))
-      throw new Error(error.message || `HTTP error! status: ${response.status}`)
+      // Handle array messages from NestJS validation
+      const message = Array.isArray(error.message) ? error.message.join(', ') : error.message
+      throw new Error(message || `HTTP error! status: ${response.status}`)
     }
 
     const text = await response.text()

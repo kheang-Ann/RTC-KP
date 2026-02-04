@@ -26,17 +26,17 @@ export class CreateCourseDto {
   code: string;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(5)
+  @IsInt({ message: 'Credits must be a number' })
+  @Min(1, { message: 'Credits must be at least 1' })
+  @Max(5, { message: 'Credits cannot exceed 5' })
   credits?: number;
 
   @IsOptional()
-  @IsInt()
+  @IsInt({ message: 'Department must be a valid ID' })
   departmentId?: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
+  @IsInt({ message: 'Teacher must be a valid ID' })
+  @Min(1, { message: 'Invalid teacher selected' })
   teacherId?: number;
 }

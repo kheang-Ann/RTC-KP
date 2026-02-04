@@ -115,6 +115,30 @@ export class GroupService {
       }
     }
 
+    // Check for duplicate group (if name, programId, or academicYear is changing)
+    const newName = dto.name ? dto.name.trim() : group.name;
+    const newProgramId = dto.programId ?? group.programId;
+    const newAcademicYear = dto.academicYear ?? group.academicYear;
+
+    if (
+      newName !== group.name ||
+      newProgramId !== group.programId ||
+      newAcademicYear !== group.academicYear
+    ) {
+      const existing = await this.groupRepo.findOne({
+        where: {
+          programId: newProgramId,
+          academicYear: newAcademicYear,
+          name: newName,
+        },
+      });
+      if (existing && existing.id !== id) {
+        throw new ConflictException(
+          `Group '${newName}' already exists for this program and year`,
+        );
+      }
+    }
+
     // Check if academic year is changing
     const academicYearChanged =
       dto.academicYear && dto.academicYear !== group.academicYear;

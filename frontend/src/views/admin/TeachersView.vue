@@ -253,7 +253,15 @@ async function saveTeacher() {
     showModal.value = false
     await loadData()
   } catch (e) {
-    error.value = (e as Error).message
+    const message = (e as Error).message
+    // Parse backend error and show on specific field
+    if (message.includes('email') && message.includes('already exists')) {
+      fieldErrors.value.personalEmail = message
+    } else if (message.includes('Phone number') && message.includes('already registered')) {
+      fieldErrors.value.phoneNumbers = message
+    } else {
+      error.value = message
+    }
   } finally {
     loading.value = false
   }
@@ -478,8 +486,13 @@ function getDepartmentName(departmentId: number | undefined): string {
                 v-model="form.personalEmail"
                 type="email"
                 required
+                :class="{ 'input-error': fieldErrors.personalEmail }"
+                @input="clearFieldError('personalEmail')"
                 placeholder="teacher@example.com"
               />
+              <span v-if="fieldErrors.personalEmail" class="field-error">
+                {{ fieldErrors.personalEmail }}
+              </span>
             </div>
             <div class="form-group">
               <label>Phone Numbers</label>

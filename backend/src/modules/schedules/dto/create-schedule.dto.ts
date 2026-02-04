@@ -10,38 +10,38 @@ import {
 import { DayOfWeek, ScheduleType, TimeSlot } from '../entities/schedule.entity';
 
 export class CreateScheduleDto {
-  @IsString()
+  @IsString({ message: 'Course is required' })
   courseId: string;
 
-  @IsInt()
+  @IsInt({ message: 'Group is required' })
   groupId: number;
 
-  @IsInt()
-  @Min(1)
-  @Max(2)
+  @IsInt({ message: 'Semester is required' })
+  @Min(1, { message: 'Semester must be 1 or 2' })
+  @Max(2, { message: 'Semester must be 1 or 2' })
   semester: number;
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(52)
+  @IsInt({ message: 'Semester weeks must be a number' })
+  @Min(1, { message: 'Semester weeks must be at least 1' })
+  @Max(52, { message: 'Semester weeks cannot exceed 52' })
   semesterWeeks?: number;
 
-  @IsEnum(DayOfWeek)
+  @IsEnum(DayOfWeek, { message: 'Please select a valid day of week' })
   dayOfWeek: DayOfWeek;
 
-  @IsEnum(TimeSlot)
+  @IsEnum(TimeSlot, { message: 'Please select a valid time slot' })
   startSlot: TimeSlot;
 
-  @IsInt()
-  @Min(1)
-  @Max(4) // Maximum 4 hours block
+  @IsInt({ message: 'Duration is required' })
+  @Min(1, { message: 'Duration must be at least 1 hour' })
+  @Max(4, { message: 'Duration cannot exceed 4 hours' })
   duration: number;
 
-  @IsEnum(ScheduleType)
+  @IsEnum(ScheduleType, { message: 'Please select a valid schedule type' })
   type: ScheduleType;
 
-  @IsString()
+  @IsString({ message: 'Room number is required' })
   roomNumber: string;
 
   @IsOptional()

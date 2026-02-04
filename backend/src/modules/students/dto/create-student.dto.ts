@@ -37,33 +37,33 @@ const PhoneArrayTransform = () =>
 
 export class CreateStudentDto {
   // Personal Information
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'Khmer name must be a string' })
+  @IsNotEmpty({ message: 'Khmer name is required' })
   @TrimTransform()
   nameKhmer: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'Latin name must be a string' })
+  @IsNotEmpty({ message: 'Latin name is required' })
   @TrimTransform()
   nameLatin: string;
 
-  @IsEnum(Gender)
+  @IsEnum(Gender, { message: 'Please select a valid gender' })
   gender: Gender;
 
-  @IsDateString()
+  @IsDateString({}, { message: 'Date of birth is required' })
   dob: string;
 
   // Academic Information
-  @IsInt()
+  @IsInt({ message: 'Department is required' })
   @Type(() => Number)
   departmentId: number;
 
-  @IsInt()
+  @IsInt({ message: 'Program is required' })
   @Type(() => Number)
   programId: number;
 
   // Contact Information
-  @IsEmail()
+  @IsEmail({}, { message: 'Please enter a valid email address' })
   personalEmail: string;
 
   @IsArray({ message: 'Phone numbers must be an array' })
