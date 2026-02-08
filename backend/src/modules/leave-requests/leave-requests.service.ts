@@ -171,7 +171,6 @@ export class LeaveRequestsService {
         'student.department',
         'student.program',
         'teacher',
-        'teacher.department',
         'reviewedBy',
       ],
     });
@@ -214,7 +213,6 @@ export class LeaveRequestsService {
         nameKhmer: leaveRequest.teacher.nameKhmer,
         email: leaveRequest.teacher.personalEmail,
         phoneNumbers: leaveRequest.teacher.phoneNumbers,
-        department: leaveRequest.teacher.department?.name,
         type: 'Teacher',
       };
     } else {

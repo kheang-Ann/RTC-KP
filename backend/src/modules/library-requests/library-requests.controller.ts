@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Controller,
   Get,
@@ -12,7 +15,10 @@ import {
   Request,
 } from '@nestjs/common';
 import { LibraryRequestsService } from './library-requests.service';
-import { CreateLibraryRequestDto, UpdateLibraryRequestStatusDto } from './dto/create-library-request.dto';
+import {
+  CreateLibraryRequestDto,
+  UpdateLibraryRequestStatusDto,
+} from './dto/create-library-request.dto';
 import { JwtAuthGuard } from '../auth/guards/jaw-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
@@ -30,7 +36,7 @@ export class LibraryRequestsController {
   ) {
     const request = await this.libraryRequestsService.createRequest(
       createDto,
-      req.user.id,
+      req.user.sub,
     );
 
     return {
@@ -45,8 +51,13 @@ export class LibraryRequestsController {
     @Query('status') status?: RequestStatus,
     @Query('myRequests') myRequests?: boolean,
   ) {
-    const requestedBy = myRequests ? req.user.id : undefined;
-    const requests = await this.libraryRequestsService.findAll(status, requestedBy);
+    const isAdmin = req.user.roles?.includes('admin');
+    // Admins see all requests by default, non-admins only see their own
+    const requestedBy = isAdmin && !myRequests ? undefined : req.user.sub;
+    const requests = await this.libraryRequestsService.findAll(
+      status,
+      requestedBy,
+    );
 
     return {
       count: requests.length,
@@ -85,7 +96,7 @@ export class LibraryRequestsController {
     const request = await this.libraryRequestsService.updateRequestStatus(
       id,
       updateDto,
-      req.user.id,
+      req.user.sub,
     );
 
     return {
@@ -102,7 +113,10 @@ export class LibraryRequestsController {
     const request = await this.libraryRequestsService.findById(id);
 
     // Allow deletion if user is requester or admin
-    if (request.requestedBy !== req.user.id && req.user.role !== 'admin') {
+    if (
+      request.requestedBy !== req.user.sub &&
+      !req.user.roles?.includes('admin')
+    ) {
       throw new Error('Unauthorized');
     }
 

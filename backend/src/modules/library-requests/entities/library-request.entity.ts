@@ -13,10 +13,10 @@ export class LibraryRequest {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column()
+  @Column({ nullable: true })
   requestedBy: number;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'requestedBy' })
   requester: User;
 
@@ -42,7 +42,7 @@ export class LibraryRequest {
   @Column({ nullable: true })
   approvedBy: number;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'approvedBy' })
   approver: User;
 

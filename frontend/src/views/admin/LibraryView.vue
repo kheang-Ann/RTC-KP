@@ -276,22 +276,26 @@ const saveEdit = async () => {
       description: editingItem.value.description,
     };
     await libraryService.updateItem(editingItem.value.id, updateData);
+    alert('Item updated successfully!');
     editingItem.value = null;
     selectedItem.value = null;
-    loadItems(); // Reload items to show updated data
-  } catch (error) {
+    await loadItems(); // Reload items to show updated data
+  } catch (error: any) {
     console.error('Failed to update item:', error);
+    alert('Failed to update item: ' + (error.message || 'Unknown error'));
   }
 };
 
 const deleteItem = async (id: number) => {
-  if (confirm('Are you sure you want to delete this item?')) {
+  if (confirm('Are you sure you want to delete this item? This action cannot be undone.')) {
     try {
       await libraryService.deleteItem(id);
+      alert('Item deleted successfully!');
       selectedItem.value = null;
-      loadItems(); // Reload items after deletion
-    } catch (error) {
+      await loadItems(); // Reload items after deletion
+    } catch (error: any) {
       console.error('Failed to delete item:', error);
+      alert('Failed to delete item: ' + (error.message || 'Unknown error'));
     }
   }
 };

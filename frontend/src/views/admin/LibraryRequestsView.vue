@@ -175,7 +175,7 @@
           <div class="request-header">
             <div>
               <h3>{{ request.title }}</h3>
-              <p class="requester">Requested by: {{ request.requester?.firstName }} {{ request.requester?.lastName }}</p>
+              <p class="requester">Requested by: {{ request.requester?.nameLatin || request.requester?.nameKhmer || request.requester?.email || 'Unknown' }}</p>
             </div>
             <span :class="['status-badge', `status-${request.status}`]">
               {{ formatStatus(request.status) }}
@@ -212,13 +212,28 @@
             </button>
           </div>
 
+          <div v-else-if="request.status === 'approved'" class="admin-actions">
+            <button
+              @click="showFulfilledModal(request)"
+              class="btn btn-fulfilled"
+            >
+              📚 Mark as Available in E-Library
+            </button>
+          </div>
+
           <div v-else-if="request.approver" class="approval-info">
-            <p>
-              <strong>{{ request.status === 'approved' ? 'Approved' : 'Rejected' }} by:</strong>
-              {{ request.approver?.firstName }} {{ request.approver?.lastName }}
+            <p v-if="request.status === 'fulfilled'">
+              <strong>📚 Available in E-Library</strong>
+            </p>
+            <p v-else>
+              <strong>{{ request.status === 'rejected' ? 'Rejected' : 'Approved' }} by:</strong>
+              {{ request.approver?.nameLatin || request.approver?.nameKhmer || request.approver?.email }}
             </p>
             <p v-if="request.approvedAt">
               <strong>Date:</strong> {{ formatDate(request.approvedAt) }}
+            </p>
+            <p v-if="request.rejectionReason" class="rejection-reason">
+              <strong>Reason:</strong> {{ request.rejectionReason }}
             </p>
           </div>
 
@@ -270,12 +285,31 @@
         </div>
       </div>
     </div>
+
+    <!-- Fulfilled Modal -->
+    <div v-if="showModal && modalType === 'fulfilled'" class="modal-overlay" @click.self="showModal = false">
+      <div class="modal">
+        <button class="close-btn" @click="showModal = false">✕</button>
+        <h3>📚 Mark as Available</h3>
+        <p>This will mark the requested book/document as now available in the E-Library.</p>
+        <p><strong>Title:</strong> {{ selectedRequest?.title }}</p>
+        <div class="modal-actions">
+          <button @click="markAsFulfilled" class="btn btn-fulfilled">
+            ✓ Mark as Available
+          </button>
+          <button @click="showModal = false" class="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { libraryService } from '@/services/library';
+import { authService } from '@/services/auth';
 
 const activeTab = ref('my-requests');
 const requestForm = ref({
@@ -296,13 +330,18 @@ const modalType = ref('');
 const selectedRequest = ref<any>(null);
 const rejectionReason = ref('');
 const filterStatus = ref('');
-const isAdmin = ref(false);
 
-// Check if user is admin
-const checkAdminStatus = () => {
-  const userRole = localStorage.getItem('userRole');
-  isAdmin.value = userRole === 'admin';
-};
+// Check if user is admin using auth service
+const isAdmin = computed(() => authService.isAdmin());
+
+// Load all requests when switching to all-requests tab
+watch(activeTab, (newTab) => {
+  if (newTab === 'all-requests') {
+    loadAllRequests();
+  } else if (newTab === 'my-requests') {
+    loadMyRequests();
+  }
+});
 
 const loadMyRequests = async () => {
   loading.value = true;
@@ -376,6 +415,12 @@ const showRejectionModal = (request: any) => {
   showModal.value = true;
 };
 
+const showFulfilledModal = (request: any) => {
+  selectedRequest.value = request;
+  modalType.value = 'fulfilled';
+  showModal.value = true;
+};
+
 const approveRequest = async () => {
   try {
     await libraryService.updateRequestStatus(selectedRequest.value.id, {
@@ -406,6 +451,18 @@ const rejectRequest = async () => {
   }
 };
 
+const markAsFulfilled = async () => {
+  try {
+    await libraryService.updateRequestStatus(selectedRequest.value.id, {
+      status: 'fulfilled',
+    });
+    showModal.value = false;
+    loadAllRequests();
+  } catch (error) {
+    console.error('Failed to mark request as fulfilled:', error);
+  }
+};
+
 const resetRequestForm = () => {
   requestForm.value = {
     title: '',
@@ -416,7 +473,13 @@ const resetRequestForm = () => {
 };
 
 const formatStatus = (status: string) => {
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  const statusLabels: Record<string, string> = {
+    pending: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected',
+    fulfilled: 'Available in E-Library',
+  };
+  return statusLabels[status] || status.charAt(0).toUpperCase() + status.slice(1);
 };
 
 const formatDate = (date: string) => {
@@ -424,8 +487,11 @@ const formatDate = (date: string) => {
 };
 
 onMounted(() => {
-  checkAdminStatus();
   loadMyRequests();
+  // If admin, also load all requests
+  if (isAdmin.value) {
+    loadAllRequests();
+  }
 });
 </script>
 
@@ -453,21 +519,23 @@ onMounted(() => {
 
 .requests-tabs {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 2rem;
   border-bottom: 2px solid #eee;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
-  padding: 1rem 1.5rem;
+  padding: 0.875rem 1.25rem;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: #666;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .tab-btn:hover {
@@ -603,6 +671,11 @@ onMounted(() => {
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-bottom: 1rem;
+}
+
+.request-card:last-child {
+  margin-bottom: 0;
 }
 
 .request-card.admin {
@@ -706,6 +779,16 @@ onMounted(() => {
 
 .btn-reject:hover {
   background-color: #c82333;
+}
+
+.btn-fulfilled {
+  background-color: #17a2b8;
+  color: white;
+  flex: 1;
+}
+
+.btn-fulfilled:hover {
+  background-color: #138496;
 }
 
 .btn-small {

@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 import {
   IsString,
   IsNotEmpty,
   IsEnum,
   IsDateString,
-  IsInt,
   IsEmail,
   IsArray,
   ArrayMinSize,
@@ -11,7 +13,7 @@ import {
   MinLength,
   Matches,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { Gender } from '../entities/teacher.entity';
 
 // Custom transformer to trim strings
@@ -49,12 +51,6 @@ export class UpdateTeacherDto {
   @IsOptional()
   @IsDateString()
   dob?: string;
-
-  // Department
-  @IsOptional()
-  @IsInt()
-  @Type(() => Number)
-  departmentId?: number;
 
   // Login email (for user account)
   @IsOptional()

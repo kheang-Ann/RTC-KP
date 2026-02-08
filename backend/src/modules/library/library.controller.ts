@@ -7,7 +7,6 @@ import {
   Delete,
   UseGuards,
   UseInterceptors,
-  UploadedFile,
   UploadedFiles,
   BadRequestException,
   Res,
@@ -16,13 +15,13 @@ import {
   Patch,
   Request,
 } from '@nestjs/common';
-import { FileInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { type Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import sharp from 'sharp';
 import { LibraryService } from './library.service';
-import { CreateLibraryItemDto, UpdateLibraryItemDto } from './dto/create-library-item.dto';
+import { UpdateLibraryItemDto } from './dto/create-library-item.dto';
 import { JwtAuthGuard } from '../auth/guards/jaw-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
@@ -41,7 +40,6 @@ export class LibraryController {
   }
 
   @Post('upload')
-  @UseGuards(RolesGuard)
   @Roles('admin')
   @UseInterceptors(
     FileFieldsInterceptor([
@@ -50,7 +48,8 @@ export class LibraryController {
     ]),
   )
   async uploadFile(
-    @UploadedFiles() files: { file?: Express.Multer.File[], cover?: Express.Multer.File[] },
+    @UploadedFiles()
+    files: { file?: Express.Multer.File[]; cover?: Express.Multer.File[] },
     @Body() createDto: any,
     @Request() req: any,
   ) {
@@ -134,7 +133,6 @@ export class LibraryController {
   }
 
   @Get('stats')
-  @UseGuards(RolesGuard)
   @Roles('admin')
   async getStats() {
     return this.libraryService.getStats();
@@ -148,7 +146,10 @@ export class LibraryController {
   }
 
   @Get(':id/download')
-  async downloadFile(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+  async downloadFile(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
     const item = await this.libraryService.findById(id);
 
     if (!fs.existsSync(item.filePath)) {
@@ -162,7 +163,10 @@ export class LibraryController {
 
   @Get(':id/cover')
   @Public()
-  async getCoverImage(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+  async getCoverImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
     const item = await this.libraryService.findById(id);
 
     if (!item.coverImagePath || !fs.existsSync(item.coverImagePath)) {
@@ -173,20 +177,27 @@ export class LibraryController {
   }
 
   @Patch(':id')
-  @UseGuards(RolesGuard)
   @Roles('admin')
-  async updateItem(@Param('id', ParseIntPipe) id: number, @Body() updateDto: UpdateLibraryItemDto) {
+  async updateItem(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDto: UpdateLibraryItemDto,
+  ) {
     return this.libraryService.updateLibraryItem(id, updateDto);
   }
 
   @Delete(':id')
-  @UseGuards(RolesGuard)
   @Roles('admin')
   async deleteItem(@Param('id', ParseIntPipe) id: number) {
     const item = await this.libraryService.findById(id);
 
-    if (fs.existsSync(item.filePath)) {
+    // Delete the main file
+    if (item.filePath && fs.existsSync(item.filePath)) {
       fs.unlinkSync(item.filePath);
+    }
+
+    // Delete the cover image if exists
+    if (item.coverImagePath && fs.existsSync(item.coverImagePath)) {
+      fs.unlinkSync(item.coverImagePath);
     }
 
     await this.libraryService.deleteLibraryItem(id);

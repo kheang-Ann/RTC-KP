@@ -154,6 +154,11 @@ function getSessionStatusClass(status: string) {
             <span class="action-label">Leave</span>
             <span class="action-desc">Request leave</span>
           </router-link>
+          <router-link to="/student/library" class="action-card card-teal">
+            <span class="action-icon">📖</span>
+            <span class="action-label">E-Library</span>
+            <span class="action-desc">Browse resources</span>
+          </router-link>
         </div>
       </div>
 
@@ -286,6 +291,11 @@ function getSessionStatusClass(status: string) {
 .action-card.card-orange {
   --accent-color: #f59e0b;
   --accent-light: #fbbf24;
+}
+
+.action-card.card-teal {
+  --accent-color: #14b8a6;
+  --accent-light: #2dd4bf;
 }
 
 .action-icon {

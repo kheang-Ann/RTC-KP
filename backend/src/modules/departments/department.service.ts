@@ -8,7 +8,6 @@ import { Department } from './entity/department.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Student } from '../students/entities/student.entity';
-import { Teacher } from '../teachers/entities/teacher.entity';
 import { Program } from '../programs/entities/program.entity';
 import { Course } from '../courses/entities/course.entity';
 
@@ -19,8 +18,6 @@ export class DepartmentService {
     private departmentRepo: Repository<Department>,
     @InjectRepository(Student)
     private studentRepo: Repository<Student>,
-    @InjectRepository(Teacher)
-    private teacherRepo: Repository<Teacher>,
     @InjectRepository(Program)
     private programRepo: Repository<Program>,
     @InjectRepository(Course)
@@ -75,16 +72,6 @@ export class DepartmentService {
     if (studentsCount > 0) {
       throw new BadRequestException(
         `Cannot delete department. Please remove ${studentsCount} student(s) first.`,
-      );
-    }
-
-    // Check for related teachers
-    const teachersCount = await this.teacherRepo.count({
-      where: { departmentId: id },
-    });
-    if (teachersCount > 0) {
-      throw new BadRequestException(
-        `Cannot delete department. Please remove ${teachersCount} teacher(s) first.`,
       );
     }
 

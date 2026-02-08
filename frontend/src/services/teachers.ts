@@ -14,10 +14,8 @@ export interface Teacher {
   nameLatin: string
   gender: 'male' | 'female'
   dob: string
-  departmentId: number
   personalEmail: string
   phoneNumbers: string[]
-  department?: { id: number; name: string }
   user?: { id: number; email: string }
   createdAt?: string
   updatedAt?: string
@@ -28,7 +26,6 @@ export interface CreateTeacherDto {
   nameLatin: string
   gender: 'male' | 'female'
   dob: string
-  departmentId: number
   personalEmail: string
   phoneNumbers: string[]
   password?: string
@@ -39,7 +36,6 @@ export interface UpdateTeacherDto {
   nameLatin?: string
   gender?: 'male' | 'female'
   dob?: string
-  departmentId?: number
   email?: string
   personalEmail?: string
   phoneNumbers?: string[]
@@ -108,7 +104,6 @@ export const teachersService = {
     formData.append('nameLatin', trimmedData.nameLatin)
     formData.append('gender', data.gender)
     formData.append('dob', data.dob)
-    formData.append('departmentId', data.departmentId.toString())
     formData.append('personalEmail', trimmedData.personalEmail)
     formData.append('phoneNumbers', JSON.stringify(trimmedData.phoneNumbers))
     if (trimmedData.password) {
@@ -140,7 +135,6 @@ export const teachersService = {
     if (trimmedData.nameLatin) formData.append('nameLatin', trimmedData.nameLatin)
     if (data.gender) formData.append('gender', data.gender)
     if (data.dob) formData.append('dob', data.dob)
-    if (data.departmentId !== undefined) formData.append('departmentId', data.departmentId.toString())
     if (trimmedData.email) formData.append('email', trimmedData.email)
     if (trimmedData.personalEmail) formData.append('personalEmail', trimmedData.personalEmail)
     if (trimmedData.phoneNumbers) formData.append('phoneNumbers', JSON.stringify(trimmedData.phoneNumbers))

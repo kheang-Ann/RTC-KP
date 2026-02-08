@@ -1,7 +1,6 @@
 import {
   Column,
   Entity,
-  ManyToOne,
   JoinColumn,
   PrimaryGeneratedColumn,
   CreateDateColumn,
@@ -9,7 +8,6 @@ import {
   Index,
   OneToOne,
 } from 'typeorm';
-import { Department } from 'src/modules/departments/entity/department.entity';
 import { User } from 'src/modules/users/entities/user.entity';
 
 export enum Gender {
@@ -47,15 +45,6 @@ export class Teacher {
 
   @Column({ type: 'date' })
   dob: Date;
-
-  // Department
-  @Index()
-  @Column({ type: 'int' })
-  departmentId: number;
-
-  @ManyToOne(() => Department, { onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'departmentId' })
-  department: Department;
 
   // Contact Information
   @Column()

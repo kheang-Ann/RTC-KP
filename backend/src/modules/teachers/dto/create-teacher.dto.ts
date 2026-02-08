@@ -6,7 +6,6 @@ import {
   IsNotEmpty,
   IsEnum,
   IsDateString,
-  IsInt,
   IsEmail,
   IsArray,
   ArrayMinSize,
@@ -14,7 +13,7 @@ import {
   MinLength,
   Matches,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import { Gender } from '../entities/teacher.entity';
 
 // Custom transformer to trim and normalize spaces (multiple spaces to single)
@@ -52,11 +51,6 @@ export class CreateTeacherDto {
 
   @IsDateString({}, { message: 'Date of birth is required' })
   dob: string;
-
-  // Department
-  @IsInt({ message: 'Department is required' })
-  @Type(() => Number)
-  departmentId: number;
 
   // Contact Information
   @IsEmail({}, { message: 'Please enter a valid email address' })

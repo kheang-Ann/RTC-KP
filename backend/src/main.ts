@@ -35,8 +35,10 @@ async function bootstrap() {
       'http://localhost:5174',
       'http://localhost:5175',
       'https://localhost:5174', // HTTPS localhost
-      'http://192.168.204.185:5174',
-      'https://192.168.204.185:5174', // HTTPS from phone
+      'http://192.168.31.246:5174',
+      'https://192.168.31.246:5174', // HTTPS from phone
+      'https://192.168.31.246:5175',
+      'https://192.168.31.246:5176',
     ],
     methods: 'GET,PATCH,POST,DELETE',
     credentials: true,

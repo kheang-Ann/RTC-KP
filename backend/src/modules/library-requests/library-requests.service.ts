@@ -67,13 +67,26 @@ export class LibraryRequestsService {
   ): Promise<LibraryRequest> {
     const request = await this.findById(id);
 
-    if (request.status !== RequestStatus.PENDING) {
-      throw new BadRequestException('Can only update pending requests');
+    // Allow: pending -> approved/rejected, approved -> fulfilled
+    if (request.status === RequestStatus.PENDING) {
+      if (updateDto.status !== RequestStatus.APPROVED && updateDto.status !== RequestStatus.REJECTED) {
+        throw new BadRequestException('Pending requests can only be approved or rejected');
+      }
+    } else if (request.status === RequestStatus.APPROVED) {
+      if (updateDto.status !== RequestStatus.FULFILLED) {
+        throw new BadRequestException('Approved requests can only be marked as fulfilled');
+      }
+    } else {
+      throw new BadRequestException('Cannot update requests with this status');
     }
 
     request.status = updateDto.status;
-    request.approvedBy = approvedBy;
-    request.approvedAt = new Date();
+    
+    // Only set approver info on first approval
+    if (!request.approvedBy) {
+      request.approvedBy = approvedBy;
+      request.approvedAt = new Date();
+    }
 
     if (updateDto.rejectionReason) {
       request.rejectionReason = updateDto.rejectionReason;

@@ -204,16 +204,6 @@ function formatDate(dateStr?: string) {
           </div>
 
           <div class="info-section">
-            <h3>🏢 Department</h3>
-            <div class="info-grid">
-              <div class="info-item">
-                <label>Department</label>
-                <span>{{ teacherProfile.department?.name || '-' }}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="info-section">
             <h3>📞 Contact Information</h3>
             <div class="info-grid">
               <div class="info-item">

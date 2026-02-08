@@ -1,9 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NotFoundException,
   ConflictException,
-  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -75,7 +73,6 @@ export class TeacherService {
       nameLatin: dto.nameLatin,
       passwordHash,
       isActive: true,
-      departmentId: dto.departmentId,
     });
     const savedUser = await this.userRepo.save(user);
 
@@ -99,7 +96,6 @@ export class TeacherService {
       nameLatin: dto.nameLatin,
       gender: dto.gender,
       dob: new Date(dto.dob),
-      departmentId: dto.departmentId,
       personalEmail: dto.personalEmail,
       phoneNumbers: dto.phoneNumbers,
     });
@@ -109,7 +105,7 @@ export class TeacherService {
 
   async findAll(): Promise<Teacher[]> {
     return this.teacherRepo.find({
-      relations: ['department', 'user'],
+      relations: ['user'],
       order: { id: 'DESC' },
     });
   }
@@ -117,7 +113,7 @@ export class TeacherService {
   async findByUserId(userId: number): Promise<Teacher> {
     const teacher = await this.teacherRepo.findOne({
       where: { userId },
-      relations: ['department', 'user'],
+      relations: ['user'],
     });
     if (!teacher) {
       throw new NotFoundException('Teacher profile not found');
@@ -128,7 +124,7 @@ export class TeacherService {
   async findOne(id: number): Promise<Teacher> {
     const teacher = await this.teacherRepo.findOne({
       where: { id },
-      relations: ['department', 'user'],
+      relations: ['user'],
     });
     if (!teacher) {
       throw new NotFoundException(`Teacher with ID ${id} not found`);
@@ -191,27 +187,6 @@ export class TeacherService {
       await this.userRepo.update(teacher.userId, { passwordHash });
     }
 
-    // Update user department if provided
-    if (dto.departmentId !== undefined && teacher.userId) {
-      const newDepartmentId = Number(dto.departmentId);
-      // Check if department is actually changing
-      if (newDepartmentId !== teacher.departmentId) {
-        // Check for courses assigned to this teacher
-        const coursesCount = await this.courseRepo.count({
-          where: { teacherId: teacher.userId },
-        });
-        if (coursesCount > 0) {
-          throw new BadRequestException(
-            `Cannot change department. Teacher is assigned to ${coursesCount} course(s). Please reassign or remove the teacher from all courses first.`,
-          );
-        }
-      }
-
-      await this.userRepo.update(teacher.userId, {
-        departmentId: newDepartmentId,
-      });
-    }
-
     // Update user name if provided
     if (teacher.userId && (dto.nameKhmer || dto.nameLatin)) {
       const userUpdateData: Partial<{ nameKhmer: string; nameLatin: string }> =
@@ -228,11 +203,6 @@ export class TeacherService {
     if (dto.nameLatin) updateData.nameLatin = dto.nameLatin;
     if (dto.gender) updateData.gender = dto.gender;
     if (dto.dob) updateData.dob = new Date(dto.dob);
-    if (dto.departmentId) {
-      updateData.departmentId = Number(dto.departmentId);
-      // Clear the loaded relation so TypeORM uses departmentId
-      teacher.department = undefined as any;
-    }
     if (dto.personalEmail) updateData.personalEmail = dto.personalEmail;
     if (dto.phoneNumbers) updateData.phoneNumbers = dto.phoneNumbers;
     if (imageFile) updateData.image = imageFile;

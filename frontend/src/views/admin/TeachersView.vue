@@ -6,14 +6,12 @@ import {
   type CreateTeacherDto,
   type UpdateTeacherDto,
 } from '@/services/teachers'
-import { departmentsService, type Department } from '@/services/departments'
 import { isValidPhoneNumber, isValidOptionalPassword } from '@/utils/validation'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 const teachers = ref<Teacher[]>([])
-const departments = ref<Department[]>([])
 const loading = ref(false)
 const error = ref('')
 const showModal = ref(false)
@@ -24,7 +22,6 @@ const deleteTargetId = ref<number | null>(null)
 // Filters
 const searchQuery = ref('')
 const filterGender = ref<string>('')
-const filterDepartment = ref<number | null>(null)
 
 // Filtered teachers
 const filteredTeachers = computed(() => {
@@ -40,10 +37,6 @@ const filteredTeachers = computed(() => {
   
   if (filterGender.value) {
     result = result.filter(t => t.gender === filterGender.value)
-  }
-  
-  if (filterDepartment.value) {
-    result = result.filter(t => t.departmentId === filterDepartment.value)
   }
   
   return result
@@ -68,7 +61,6 @@ const form = ref({
   nameLatin: '',
   gender: 'male' as 'male' | 'female',
   dob: '',
-  departmentId: undefined as number | undefined,
   email: '', // Login email (readonly for edit)
   personalEmail: '',
   phoneNumbers: [''] as string[],
@@ -90,12 +82,10 @@ async function loadData() {
   loading.value = true
   error.value = ''
   try {
-    const [teachersData, depsData] = await Promise.all([
+    const [teachersData] = await Promise.all([
       teachersService.getAll(),
-      departmentsService.getAll(),
     ])
     teachers.value = teachersData
-    departments.value = depsData
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -109,7 +99,6 @@ function resetForm() {
     nameLatin: '',
     gender: 'male',
     dob: '',
-    departmentId: undefined,
     email: '',
     personalEmail: '',
     phoneNumbers: [''],
@@ -133,7 +122,6 @@ function openEdit(teacher: Teacher) {
     nameLatin: teacher.nameLatin,
     gender: teacher.gender,
     dob: dobValue || '',
-    departmentId: teacher.departmentId,
     email: teacher.user?.email || '',
     personalEmail: teacher.personalEmail,
     phoneNumbers: teacher.phoneNumbers?.length ? [...teacher.phoneNumbers] : [''],
@@ -172,12 +160,6 @@ function removePhoneNumber(index: number) {
 function validateForm(): boolean {
   fieldErrors.value = {}
   let isValid = true
-
-  // Validate department
-  if (!form.value.departmentId) {
-    fieldErrors.value.departmentId = 'Department is required'
-    isValid = false
-  }
 
   // Validate phone numbers
   const phones = form.value.phoneNumbers.filter((p) => p.trim())
@@ -229,7 +211,6 @@ async function saveTeacher() {
         nameLatin: form.value.nameLatin,
         gender: form.value.gender,
         dob: form.value.dob,
-        departmentId: form.value.departmentId,
         personalEmail: form.value.personalEmail,
         phoneNumbers: phoneNumbers,
       }
@@ -243,7 +224,6 @@ async function saveTeacher() {
         nameLatin: form.value.nameLatin,
         gender: form.value.gender,
         dob: form.value.dob,
-        departmentId: form.value.departmentId!,
         personalEmail: form.value.personalEmail,
         phoneNumbers: phoneNumbers,
         password: form.value.password,
@@ -292,17 +272,12 @@ function cancelDelete() {
   deleteTargetId.value = null
 }
 
-function getDepartmentName(departmentId: number | undefined): string {
-  if (!departmentId) return '-'
-  const dept = departments.value.find((d) => d.id === departmentId)
-  return dept?.name || '-'
-}
 </script>
 
 <template>
   <div class="page-container">
     <div class="page-header-row">
-      <h1 class="page-title">👨‍🏫 Teachers Management</h1>
+      <h1 class="page-title">Teachers Management</h1>
       <button class="btn btn-primary" @click="openCreate">+ Add Teacher</button>
     </div>
 
@@ -322,13 +297,6 @@ function getDepartmentName(departmentId: number | undefined): string {
           <option value="female">Female</option>
         </select>
       </div>
-      <div class="filter-group">
-        <label>Department</label>
-        <select v-model="filterDepartment">
-          <option :value="null">All Departments</option>
-          <option v-for="dept in departments" :key="dept.id" :value="dept.id">{{ dept.name }}</option>
-        </select>
-      </div>
     </div>
 
     <div v-if="loading" class="page-loading">Loading...</div>
@@ -340,7 +308,6 @@ function getDepartmentName(departmentId: number | undefined): string {
           <th>Name (Khmer)</th>
           <th>Name (Latin)</th>
           <th>Gender</th>
-          <th>Department</th>
           <th>Email</th>
           <th>Actions</th>
         </tr>
@@ -359,7 +326,6 @@ function getDepartmentName(departmentId: number | undefined): string {
           <td>{{ teacher.nameKhmer }}</td>
           <td>{{ teacher.nameLatin }}</td>
           <td>{{ teacher.gender === 'male' ? '👨 Male' : '👩 Female' }}</td>
-          <td>{{ getDepartmentName(teacher.departmentId) }}</td>
           <td>{{ teacher.personalEmail }}</td>
           <td>
             <div class="btn-group">
@@ -441,28 +407,6 @@ function getDepartmentName(departmentId: number | undefined): string {
                 <label>Date of Birth *</label>
                 <input v-model="form.dob" type="date" required :max="maxDob" />
               </div>
-            </div>
-          </div>
-
-          <!-- Department -->
-          <div class="form-section">
-            <h3>🏢 Department</h3>
-            <div class="form-group">
-              <label>Department *</label>
-              <select
-                v-model.number="form.departmentId"
-                required
-                :class="{ 'input-error': fieldErrors.departmentId }"
-                @change="clearFieldError('departmentId')"
-              >
-                <option :value="undefined" disabled>Select department</option>
-                <option v-for="dept in departments" :key="dept.id" :value="dept.id">
-                  {{ dept.name }}
-                </option>
-              </select>
-              <span v-if="fieldErrors.departmentId" class="field-error">
-                {{ fieldErrors.departmentId }}
-              </span>
             </div>
           </div>
 
