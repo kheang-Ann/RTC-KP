@@ -9,10 +9,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { Student } from '../students/entities/student.entity';
+import { Teacher } from '../teachers/entities/teacher.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RolePermission, RefreshToken]),
+    TypeOrmModule.forFeature([RolePermission, RefreshToken, Student, Teacher]),
     UserModule,
     JwtModule.register({
       global: true,

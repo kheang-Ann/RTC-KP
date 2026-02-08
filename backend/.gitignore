@@ -42,6 +42,13 @@ lerna-debug.log*
 .env.production.local
 .env.local
 
+# SSL certificates - NEVER commit private keys!
+ssl/
+*.pem
+*.key
+*.crt
+*.cert
+
 # temp directory
 .temp
 .tmp

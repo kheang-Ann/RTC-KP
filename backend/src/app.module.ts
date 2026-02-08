@@ -4,16 +4,27 @@ import { AppService } from './app.service';
 import DatabaseConfig from './config/db.config';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-// import { CourseModule } from './modules/courses/course.module';
 import { UserModule } from './modules/users/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DepartmentModule } from './modules/departments/department.module';
+import { CourseModule } from './modules/courses/course.module';
+import { SessionsModule } from './modules/sessions/sessions.module';
+import { AttendancesModule } from './modules/attendances/attendances.module';
+import { LeaveRequestsModule } from './modules/leave-requests/leave-requests.module';
+import { ProgramModule } from './modules/programs/program.module';
+import { StudentModule } from './modules/students/student.module';
+import { TeacherModule } from './modules/teachers/teacher.module';
+import { GroupModule } from './modules/groups/group.module';
+import { ScheduleModule } from './modules/schedules/schedule.module';
+import { LibraryModule } from './modules/library/library.module';
+import { LibraryRequestsModule } from './modules/library-requests/library-requests.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [DatabaseConfig],
-      envFilePath: '../.env',
+      envFilePath: './.env',
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -27,7 +38,18 @@ import { AuthModule } from './modules/auth/auth.module';
     }),
     AuthModule,
     UserModule,
-    // CourseModule,
+    DepartmentModule,
+    CourseModule,
+    SessionsModule,
+    AttendancesModule,
+    LeaveRequestsModule,
+    ProgramModule,
+    StudentModule,
+    TeacherModule,
+    GroupModule,
+    ScheduleModule,
+    LibraryModule,
+    LibraryRequestsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
